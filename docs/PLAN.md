@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Plan version** | 1.0 |
-| **Based on** | `docs/SPEC.md` v1.1 |
-| **Status** | Draft — awaiting human approval |
+| **Based on** | `docs/SPEC.md` v1.2 |
+| **Status** | Draft — awaiting human approval (PQ-01, PQ-02, PQ-21 decided) |
 | **Date** | 2026-10-25 |
 | **Author role** | Planner (AGENTS.md §4) |
 
@@ -40,16 +40,16 @@ T-36 (dogfood upload step) and T-37 (optional agent review) depend only on T-03 
 
 ### 2.2 Test-first flow per module
 
-Most modules are split into a **pair** of tasks with the same number: `T-nna` (test writer) and `T-nnb` (implementer). Because `main` is protected and the `ci` check must pass before merging, failing tests can never be merged on their own. The pair therefore works like this:
+Most modules are split into a **pair** of stages with the same number: `T-nna` (test writer) and `T-nnb` (implementer). Because `main` is protected and the `ci` check must pass before merging, failing tests can never be merged on their own. Both stages therefore share **one branch and one pull request** (decision PQ-02):
 
 | Step | Who | What |
 |---|---|---|
-| 1 | Test writer (`T-nna`) | Branch `test/<slug>` from `main`. Write the failing tests (named by REQ ID) and fixtures. Delete the pending placeholders ([§3.7](#37-test-conventions-fresh-db-fixed-clock-speccheck)) for the IDs now covered. Open a **draft** PR titled `T-nna tests: …`. `npm test` is expected to fail; `lint`, `build`, and `spec:check` must pass. |
-| 2 | Human | Review the tests only (do they match the spec?). Approve with a review comment or the label `tests-approved`. Do **not** merge. |
-| 3 | Implementer (`T-nnb`) | Branch `feat/<slug>` from the tip of `test/<slug>`. Implement until all checks pass. **Must not modify** any test file from step 1 (reviewer checks `git diff test/<slug>..feat/<slug> -- '**/*.test.*' '**/*.spec.*'` is empty). Open a PR to `main`. |
-| 4 | Human | Review the implementation diff (against `test/<slug>`), merge, and close the draft test PR as superseded. |
+| 1 | Test writer (`T-nna`) | Create branch `feat/<slug>` from `main`. Write the failing tests (named by REQ ID) and fixtures, and delete the pending placeholders ([§3.7](#37-test-conventions-fresh-db-fixed-clock-speccheck)) for the IDs now covered. Commit as `test: …`. Open a **draft** PR titled `T-nn: …`. `npm test` is expected to fail; `lint`, `build`, and `spec:check` must pass. |
+| 2 | Human | Review the tests only (do they match the spec?). Approve by adding the label `tests-approved` and noting the approved commit SHA in a PR comment. Do **not** merge. |
+| 3 | Implementer (`T-nnb`) | Add commits to the **same branch** until all checks pass. **Must not modify** any test file from step 1. The reviewer checks that `git diff <approved-sha>..HEAD -- '**/*.test.*' '**/*.spec.*'` is empty. Mark the PR ready for review. |
+| 4 | Human | Review the implementation commits and merge. One task, one PR, one merge. |
 
-If the implementer believes a test is wrong, it stops and says so in its PR (AGENTS.md §4, §8); the test writer fixes it on `test/<slug>` after human agreement.
+If the implementer believes a test is wrong, it stops and says so in the PR (AGENTS.md §4, §8). The test writer fixes it on the same branch after human agreement, and the human notes the new approved SHA.
 
 **Combined tasks (role "both").** A single agent writes tests first (first commit) then the implementation (second commit) in one PR, when the split would add overhead without adding a safety check:
 
@@ -399,9 +399,9 @@ Every integration test gets its own DB. ShopLite acceptance seeds once per test 
 
 - **missing** = active IDs not at the start of any `test`- or `todo`-kind title → error
 - **unknown** = any `REQ-…` ID anywhere in a title that is not in the spec → error, naming the ID and file
-- **pending** = IDs covered **only** by `todo` titles → printed as a count and list, not an error (assumption PQ-01)
+- **pending** = IDs covered **only** by `todo` titles → printed as a count and list, not an error (SPEC REQ-NFR-05, decision D-14)
 - `skip`-kind titles don't count as coverage
-- Exit code `1` if there are missing or unknown IDs, else `0`.
+- Exit code `1` if there are missing or unknown IDs, else `0`. With `--strict`, any pending ID is also an error (exit `1`).
 
 T-02 creates one pending placeholder per active ID (except REQ-NFR-05, which T-02 covers for real). Each test-writer task deletes the placeholder files for the IDs it now covers. M4 requires zero pending.
 
@@ -421,37 +421,37 @@ Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2
 | T-02 | spec:check + pending registry | `chore/spec-check` | Both | T-01 | NFR-05 | S | Todo |
 | T-03 | CI workflow `ci.yml` | `ci/pr-checks` | Both | T-02 | CI-01, 02, 03, 05 | S | Todo |
 | T-04 | Shared contracts | `feat/shared-contracts` | Both | T-03 | API-01 | S | Todo |
-| T-05 | Clock and config | `test/clock-config` → `feat/clock-config` | TW → IM | T-03 | NFR-04, RET-02 | S | Todo |
+| T-05 | Clock and config | `feat/clock-config` | TW → IM | T-03 | NFR-04, RET-02 | S | Todo |
 | T-06 | Database schema and test helpers | `chore/db-schema` | IM | T-03 | None | M | Todo |
-| T-07 | API skeleton: app, errors, logging, health, startup | `test/api-skeleton` → `feat/api-skeleton` | TW → IM | T-04, T-05, T-06 | API-01, API-07, NFR-03, RET-02 | M | Todo |
-| T-08 | JUnit parser | `test/junit-parser` → `feat/junit-parser` | TW → IM | T-04 | ING-02…06, ING-08 | M | Todo |
-| T-09 | Ingest service (storage) | `test/ingest-service` → `feat/ingest-service` | TW → IM | T-06, T-08 | ING-04…07, ING-11…13 | M | Todo |
-| T-10 | Upload endpoint `POST /results` | `test/upload-endpoint` → `feat/upload-endpoint` | TW → IM | T-07, T-09 | ING-01…03, 07…14 | M | Todo |
-| T-11 | ShopLite scenario generator | `test/seed-scenario` → `feat/seed-scenario` | TW → IM | T-04 | SEED-03, 04, 05 | M/L | Todo |
-| T-12 | Seed output, manifest, CLI | `test/seed-cli` → `feat/seed-cli` | TW → IM | T-08, T-10, T-11 | SEED-01, 02, 06 | M | Todo |
-| T-13 | Detector and window statistics | `test/detector` → `feat/detector` | TW → IM | T-04 | DET-01…06, STA-01, 02, 07 | M | Todo |
-| T-14 | Statuses, scopes, quarantine rules | `test/statuses` → `feat/statuses` | TW → IM | T-13 | CLS-01…05, QUA-03, 04, STA-03 | M | Todo |
-| T-15 | Trend series | `test/trend` → `feat/trend` | TW → IM | T-13 | STA-05 | S | Todo |
-| T-16 | Stats read service | `test/stats-service` → `feat/stats-service` | TW → IM | T-06, T-14 | STA-03, STA-06 | M | Todo |
-| T-17 | `GET /repos`, `GET /summary` | `test/repos-summary` → `feat/repos-summary` | TW → IM | T-07, T-16 | API-02, API-04 | M | Todo |
-| T-18 | `GET /tests` ranked list | `test/tests-list` → `feat/tests-list` | TW → IM | T-07, T-10, T-16 | API-01, 03, CLS-05, STA-06, NFR-04, ING-10, ING-11 | M | Todo |
-| T-19 | `GET /tests/:id` detail | `test/test-detail` → `feat/test-detail` | TW → IM | T-07, T-16 | API-01, API-05, STA-03, QUA-03 | M | Todo |
-| T-20 | `GET /tests/:id/history` | `test/test-history` → `feat/test-history` | TW → IM | T-07, T-15, T-16 | API-06, STA-05 | M | Todo |
-| T-21 | Manual quarantine `POST`/`DELETE` | `test/manual-quarantine` → `feat/manual-quarantine` | TW → IM | T-10, T-19 | QUA-01, QUA-02, ING-10 | M | Todo |
-| T-22 | `GET /quarantine` list for CI | `test/quarantine-list` → `feat/quarantine-list` | TW → IM | T-21 | QUA-05 | S | Todo |
-| T-23 | Retention cleanup | `test/retention` → `feat/retention` | TW → IM | T-07 | RET-01, RET-03 | S | Todo |
+| T-07 | API skeleton: app, errors, logging, health, startup | `feat/api-skeleton` | TW → IM | T-04, T-05, T-06 | API-01, API-07, NFR-03, RET-02 | M | Todo |
+| T-08 | JUnit parser | `feat/junit-parser` | TW → IM | T-04 | ING-02…06, ING-08 | M | Todo |
+| T-09 | Ingest service (storage) | `feat/ingest-service` | TW → IM | T-06, T-08 | ING-04…07, ING-11…13 | M | Todo |
+| T-10 | Upload endpoint `POST /results` | `feat/upload-endpoint` | TW → IM | T-07, T-09 | ING-01…03, 07…14 | M | Todo |
+| T-11 | ShopLite scenario generator | `feat/seed-scenario` | TW → IM | T-04 | SEED-03, 04, 05 | M/L | Todo |
+| T-12 | Seed output, manifest, CLI | `feat/seed-cli` | TW → IM | T-08, T-10, T-11 | SEED-01, 02, 06 | M | Todo |
+| T-13 | Detector and window statistics | `feat/detector` | TW → IM | T-04 | DET-01…06, STA-01, 02, 07 | M | Todo |
+| T-14 | Statuses, scopes, quarantine rules | `feat/statuses` | TW → IM | T-13 | CLS-01…05, QUA-03, 04, STA-03 | M | Todo |
+| T-15 | Trend series | `feat/trend` | TW → IM | T-13 | STA-05 | S | Todo |
+| T-16 | Stats read service | `feat/stats-service` | TW → IM | T-06, T-14 | STA-03, STA-06 | M | Todo |
+| T-17 | `GET /repos`, `GET /summary` | `feat/repos-summary` | TW → IM | T-07, T-16 | API-02, API-04 | M | Todo |
+| T-18 | `GET /tests` ranked list | `feat/tests-list` | TW → IM | T-07, T-10, T-16 | API-01, 03, CLS-05, STA-06, NFR-04, ING-10, ING-11 | M | Todo |
+| T-19 | `GET /tests/:id` detail | `feat/test-detail` | TW → IM | T-07, T-16 | API-01, API-05, STA-03, QUA-03 | M | Todo |
+| T-20 | `GET /tests/:id/history` | `feat/test-history` | TW → IM | T-07, T-15, T-16 | API-06, STA-05 | M | Todo |
+| T-21 | Manual quarantine `POST`/`DELETE` | `feat/manual-quarantine` | TW → IM | T-10, T-19 | QUA-01, QUA-02, ING-10 | M | Todo |
+| T-22 | `GET /quarantine` list for CI | `feat/quarantine-list` | TW → IM | T-21 | QUA-05 | S | Todo |
+| T-23 | Retention cleanup | `feat/retention` | TW → IM | T-07 | RET-01, RET-03 | S | Todo |
 | T-24 | ShopLite acceptance suite (API) | `test/shoplite-acceptance` | TW | T-12, T-17…T-22 | SEED-03, 05, DET-05, STA-05, QUA-05, API-02…05 | M | Todo |
 | T-25 | ShopLite discrepancy fixes (conditional) | `fix/shoplite-acceptance` | IM | T-24 | as failing | S–M | Todo |
-| T-26 | Web foundation | `test/web-foundation` → `feat/web-foundation` | TW → IM | T-04 | STA-04, UI-03, UI-06 | M | Todo |
-| T-27 | Overview cards and filter chips | `test/overview-filters` → `feat/overview-filters` | TW → IM | T-26 | UI-01, UI-02 | M | Todo |
-| T-28 | Ranked table and search | `test/ranked-table` → `feat/ranked-table` | TW → IM | T-26 | UI-04, UI-05 | M | Todo |
-| T-29 | Loading, empty, error states | `test/ui-states` → `feat/ui-states` | TW → IM | T-27, T-28 | UI-08 | S | Todo |
-| T-30 | Test detail page (read-only) | `test/detail-page` → `feat/detail-page` | TW → IM | T-26 | UI-07 | M | Todo |
-| T-31 | Quarantine controls | `test/quarantine-controls` → `feat/quarantine-controls` | TW → IM | T-30 | UI-07, UI-09 | S | Todo |
+| T-26 | Web foundation | `feat/web-foundation` | TW → IM | T-04 | STA-04, UI-03, UI-06 | M | Todo |
+| T-27 | Overview cards and filter chips | `feat/overview-filters` | TW → IM | T-26 | UI-01, UI-02 | M | Todo |
+| T-28 | Ranked table and search | `feat/ranked-table` | TW → IM | T-26 | UI-04, UI-05 | M | Todo |
+| T-29 | Loading, empty, error states | `feat/ui-states` | TW → IM | T-27, T-28 | UI-08 | S | Todo |
+| T-30 | Test detail page (read-only) | `feat/detail-page` | TW → IM | T-26 | UI-07 | M | Todo |
+| T-31 | Quarantine controls | `feat/quarantine-controls` | TW → IM | T-30 | UI-07, UI-09 | S | Todo |
 | T-32 | E2E harness and overview flows | `test/e2e-overview` | Both | T-12, T-17, T-18, T-27, T-28 | NFR-02, UI-01…05 | M | Todo |
 | T-33 | E2E detail, quarantine, error flows | `test/e2e-detail` | TW (+ fix) | T-20, T-21, T-29, T-31, T-32 | UI-07, UI-08 | S | Todo |
-| T-34 | Accessibility and responsive layout | `test/a11y` → `feat/a11y` | TW → IM | T-29, T-31, T-32 | UI-09, UI-10 | M | Todo |
-| T-35 | Benchmarks | `test/bench` → `feat/bench` | TW → IM | T-12, T-17, T-18, T-20 | NFR-01 | M | Todo |
+| T-34 | Accessibility and responsive layout | `feat/a11y` | TW → IM | T-29, T-31, T-32 | UI-09, UI-10 | M | Todo |
+| T-35 | Benchmarks | `feat/bench` | TW → IM | T-12, T-17, T-18, T-20 | NFR-01 | M | Todo |
 | T-36 | Dogfood upload step | `ci/dogfood-upload` | Both | T-03 | CI-04 | S | Todo |
 | T-37 | Agent review workflow (optional) | `ci/agent-review` | Both | T-03 | CI-06 | S | Todo |
 | T-38 | Traceability close-out and docs | `docs/v1-closeout` | IM | all others | NFR-05 (verify) | S | Todo |
@@ -469,8 +469,8 @@ Each entry adds: parallelism, files it may touch, scope, and done notes. All tas
 
 **T-02 spec:check + pending registry** · `chore/spec-check` · Both · depends: T-01 · parallel: — · REQs: REQ-NFR-05 · S
 - *Files:* `tools/spec-check/src/**`, `test/spec-check/**`, `test/traceability/pending/*.test.ts`, root `package.json` (script).
-- *Scope:* implement §3.5 `tools/spec-check` per §3.7. Tests use fixture strings, e.g. a test named `REQ-DET-99: …` → fails and names `REQ-DET-99`; a missing ID → fails; todo-only → pending, exit 0; `.skip` doesn't count; Withdrawn is ignored. Generate one `it.todo("REQ-XXX-NN: pending")` file for each of the other 73 active IDs.
-- *Done:* `npm run spec:check` exits 0 on the repo and prints "73 pending"; the fixture tests prove both mismatch kinds exit non-zero.
+- *Scope:* implement §3.5 `tools/spec-check` per §3.7. Tests use fixture strings, e.g. a test named `REQ-DET-99: …` → fails and names `REQ-DET-99`; a missing ID → fails; todo-only → pending, exit 0, but `--strict` fails and names it; `.skip` doesn't count; Withdrawn is ignored. Generate one `it.todo("REQ-XXX-NN: pending")` file for each of the other 73 active IDs.
+- *Done:* `npm run spec:check` exits 0 on the repo and prints "73 pending"; `npm run spec:check -- --strict` exits non-zero; the fixture tests prove both mismatch kinds exit non-zero.
 
 **T-03 CI workflow** · `ci/pr-checks` · Both · depends: T-02 · parallel: — · REQs: REQ-CI-01, REQ-CI-02, REQ-CI-03, REQ-CI-05 · S
 - *Files:* `.github/workflows/ci.yml`, `test/ci/workflows.test.ts`, root `package.json` (`yaml` devDependency).
@@ -654,7 +654,7 @@ Each entry adds: parallelism, files it may touch, scope, and done notes. All tas
 
 **T-38 Traceability close-out and docs** · `docs/v1-closeout` · IM · depends: all other tasks · REQs: REQ-NFR-05 (verification) · S
 - *Files:* `test/traceability/**` (delete), `README.md`, `docs/PLAN.md` (statuses), `docs/RETRO.md`.
-- *Scope:* confirm `npm run spec:check` reports **0 pending, 0 missing, 0 unknown**; delete the empty pending folder; check README commands match §3.2; record manual CI checks done.
+- *Scope:* confirm `npm run spec:check -- --strict` passes (**0 pending, 0 missing, 0 unknown**); delete the empty pending folder; check README commands match §3.2; record manual CI checks done.
 - *Done:* M4 exit criteria met.
 
 ---
@@ -855,8 +855,8 @@ These are points where the spec is silent or ambiguous **for planning purposes**
 
 | # | Question | Affects | Blocks |
 |---|---|---|---|
-| PQ-01 | **Traceability during build-up.** REQ-NFR-05 makes `spec:check` fail while any REQ lacks a test, and REQ-CI-01 runs it on every PR, so CI would be red from T-03 until the last REQ test exists. *Proposal:* `it.todo("REQ-…: pending")` placeholders count as references (listed as "pending", exit 0), and M4 requires zero pending. Alternatives: drop `spec:check` from `ci.yml` until M4 (contradicts REQ-CI-01), or write all tests up-front as todos in one PR. Approve or choose. | REQ-NFR-05, REQ-CI-01 | T-02 |
-| PQ-02 | **Test-first with a protected `main`.** Failing tests can't merge alone. *Proposal:* the draft-PR pair flow in §2.2 (test branch reviewed, implementer branches from it, one merge). Approve or choose another flow (e.g. one shared branch per pair). | AGENTS.md §3, §7 | all pairs |
+| PQ-01 | ✅ **Traceability during build-up.** **Decided 2026-10-25:** placeholder tests `it.todo("REQ-…: pending")` count as pending; `spec:check` passes with pending IDs and `spec:check --strict` fails on them. Recorded in SPEC v1.2 as REQ-NFR-05 and decision D-14. | REQ-NFR-05, REQ-CI-01 | — |
+| PQ-02 | ✅ **Test-first with a protected `main`.** **Decided 2026-10-25:** one branch and one PR per task pair, as described in §2.2 (test commits first, human approves the tests by SHA, implementer adds commits to the same branch). | AGENTS.md §3, §7 | — |
 | PQ-03 | **Dashboard quarantine with `UPLOAD_TOKEN` set.** REQ-UI-07 has Quarantine/Release controls, but write endpoints need `Authorization: Bearer` (REQ-ING-10, D-12). How does the dashboard get the token (prompt the user, a `VITE_` variable baked into the build, or controls disabled when a token is required)? | REQ-UI-07, REQ-ING-10 | T-31, T-33, T-34 |
 | PQ-04 | **CORS / origin.** The dashboard (Vite, its own port) calls the API at `VITE_API_URL`, which is cross-origin. The spec doesn't say whether the API sends CORS headers (for which origins), or whether a proxy / same-origin serving is expected. | REQ-UI-*, §13.2 | T-26, T-32 |
 | PQ-05 | **Dogfood upload details.** (a) REQ-ING-07 replaces an attempt on re-upload, so uploading **several** JUnit files per CI attempt would overwrite each other; the plan assumes `npm test` writes a single file. Confirm, and say whether e2e reports are uploaded too. (b) Which `branch` value on `pull_request` events (`github.head_ref` vs `github.ref_name`, which is `N/merge`)? (c) What is `startedAt` taken from (no run-start time exists in the GitHub context)? | REQ-CI-03, REQ-CI-04 | T-36 |
@@ -875,7 +875,7 @@ These are points where the spec is silent or ambiguous **for planning purposes**
 | PQ-18 | **Detail page and labels.** What does the detail page show when the selected scope has `status: null`? Does the commit strip show all (up to 100) commits? Is the marker for one failure "1 unconfirmed failure" (the spec writes "N unconfirmed failure(s)")? | REQ-UI-04, UI-07 | T-28, T-30 |
 | PQ-19 | **Position numbering in REQ-ING-04.** With nested suites, is the 1-based position of the offending `<testcase>` counted in document order across the whole report? | REQ-ING-04 | T-08 |
 | PQ-20 | **E2E vs REQ-CI-02.** `npm run test:e2e` needs a flakewatch server. The plan assumes Playwright starts its own local instance inside the job, which REQ-CI-02's "no running flakewatch server" doesn't forbid. Confirm. | REQ-CI-02, NFR-02 | T-32 |
-| PQ-21 | **Dependencies beyond the fixed stack** need approval (AGENTS.md §6): a multipart parser (`multer` or `busboy`), `tsx`, `yaml`, `concurrently`, `jsdom`, `@testing-library/user-event`, `@axe-core/playwright` (and `axe-core` for component checks), ESLint/Prettier packages. | — | T-01, T-03, T-10, T-34 |
+| PQ-21 | ✅ **Dependencies beyond the fixed stack** **Decided 2026-10-25:** all listed packages are approved: `multer` or `busboy`, `tsx`, `yaml`, `concurrently`, `jsdom`, `@testing-library/user-event`, `axe-core`, `@axe-core/playwright`, and the ESLint/Prettier packages. Anything else still needs a reason in its PR (AGENTS.md §6). | — | — |
 | PQ-22 | **Retention clock.** Does the daily cleanup use the clock module (so `FLAKEWATCH_NOW` applies), as AGENTS.md §6 implies? Note that `npm run seed` data (ending 2026-10-24) will be deleted by a server on the real clock after 2027-01-22 with the default 90 days. | REQ-RET-01, NFR-04 | T-23 |
 
 ### 7.2 Delivery risks
@@ -905,10 +905,10 @@ Each becomes a spec PR first (SPEC §14) and then a plan update.
 
 | Milestone | Tasks | Exit criteria |
 |---|---|---|
-| **M1 Pipeline green on empty scaffold** | T-01, T-02, T-03, T-04 | `ci.yml` runs on PRs to `main` and on push to `main` and is green; `npm run spec:check` exits 0 with 73 pending; `test-results` artifact uploaded; branch protection on `main` set (1 human review + `ci` check); *(manual)* REQ-CI-01/03 checks recorded; PQ-01, PQ-02, PQ-21 answered. |
+| **M1 Pipeline green on empty scaffold** | T-01, T-02, T-03, T-04 | `ci.yml` runs on PRs to `main` and on push to `main` and is green; `npm run spec:check` exits 0 with 73 pending; `test-results` artifact uploaded; branch protection on `main` set (1 human review + `ci` check); *(manual)* REQ-CI-01/03 checks recorded; PQ-01, PQ-02, and PQ-21 decided (2026-10-25). |
 | **M2 ShopLite ingested and ranked via API** | T-05 … T-25 | `npm run seed` loads ShopLite into `npm run dev`; T-24 ShopLite acceptance suite green (every SEED-05 value exact, top five correct, summary equals the example); all ING, DET, STA, CLS, QUA, API, RET, and SEED requirement tests pass; no placeholders left for those areas. |
 | **M3 Dashboard usable** | T-26 … T-32 | Overview, filters, ranked table, search, detail page, quarantine controls, and states work against the seeded API; component tests green; T-32 e2e (incl. REQ-NFR-02 top five visible at 1280 × 800) green in CI; PQ-03 and PQ-04 answered. |
-| **M4 v1 complete** | T-33 … T-38 | All REQ tests pass in CI (`npm test`, `npm run test:e2e`); `npm run spec:check` reports 0 missing, 0 unknown, **0 pending**; `npm run bench` report recorded (SHOULD targets; misses noted, not blocking); README and RETRO updated; all PQ items answered or recorded as decisions. |
+| **M4 v1 complete** | T-33 … T-38 | All REQ tests pass in CI (`npm test`, `npm run test:e2e`); `npm run spec:check -- --strict` passes (0 missing, 0 unknown, **0 pending**); `npm run bench` report recorded (SHOULD targets; misses noted, not blocking); README and RETRO updated; all PQ items answered or recorded as decisions. |
 
 ---
 
@@ -917,3 +917,4 @@ Each becomes a spec PR first (SPEC §14) and then a plan update.
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-10-25 | First draft for human approval. |
+| 1.0 (rev.) | 2026-10-25 | Human decisions applied before approval: PQ-01 (pending placeholders, SPEC v1.2), PQ-02 (one branch and one PR per pair), PQ-21 (dependencies approved). |

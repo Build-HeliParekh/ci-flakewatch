@@ -11,7 +11,7 @@ Standing instructions for **every AI coding agent** (and human contributor) work
 | Document | Role |
 |---|---|
 | [`docs/SPEC.md`](docs/SPEC.md) | **The source of truth for behavior.** Every requirement has an ID such as `REQ-DET-01`. |
-| `docs/PLAN.md` | The task breakdown, interfaces, and order of work (once written). |
+| [`docs/PLAN.md`](docs/PLAN.md) | The task breakdown, shared interfaces, and order of work. Your task comes from here. |
 | [`README.md`](README.md) | Overview for humans. It follows the spec, not the other way round. |
 | [`docs/RETRO.md`](docs/RETRO.md) | Log of spec gaps and agent mistakes, used for the retrospective. |
 | [`docs/PRESENTATION-QA.md`](docs/PRESENTATION-QA.md) | Answers for presentations. Keep it in sync with decisions. |
@@ -31,16 +31,21 @@ Standing instructions for **every AI coding agent** (and human contributor) work
 
 ## 3. Workflow for a task
 
-1. **Read** this file, the task (its issue or its `PLAN.md` entry), and every requirement ID it lists.
-2. **Branch** from the latest `main`, using the naming in [§7](#7-git-and-pull-requests).
-3. **Write or confirm the tests first.** Every test covering a requirement starts its name with the ID:
+Tasks come from `docs/PLAN.md`. Most are a **pair**: a test writer stage (`T-nna`) and an implementer stage (`T-nnb`) that share **one branch and one pull request** (PLAN §2.2).
+
+1. **Read** this file, the task in `docs/PLAN.md`, and every requirement ID it lists.
+2. **Test writer:** create the branch from the latest `main` (naming in [§7](#7-git-and-pull-requests)). Write the failing tests first. Every test covering a requirement starts its name with the ID:
    ```ts
    it("REQ-DET-01: marks fail-then-pass on the same commit as flaky", () => { /* ... */ });
    ```
-4. **Implement** until those tests pass.
+   Delete the pending placeholder files for the IDs you now cover ([§8](#8-testing-rules)). Commit as `test: …` and open a **draft** PR.
+3. **Human:** reviews the tests only, then adds the label `tests-approved` and notes the approved commit SHA.
+4. **Implementer:** add commits to the **same branch** until every check passes. Never change a test file from step 2. If you think a test is wrong, stop and say so in the PR.
 5. **Run the checks** in [§5](#5-commands) and fix every failure.
-6. **Open a PR** using the template, and list every requirement ID it covers.
+6. **Mark the PR ready for review** and complete the template, listing every requirement ID it covers. A human reviews and merges.
 7. **If anything in the spec was unclear,** even if you worked it out, add an entry to `docs/RETRO.md`.
+
+Single-role tasks (scaffold, workflows, close-out, and so on) follow the same steps in one stage.
 
 ---
 
@@ -69,7 +74,8 @@ Run these from the repo root. Commands marked *(after scaffold)* exist once the 
 | `npm install` | After cloning or when dependencies change |
 | `npm run lint` | Before every commit |
 | `npm test` | Before every commit; must pass |
-| `npm run spec:check` | Before opening a PR; must pass *(after scaffold)* |
+| `npm run spec:check` | Before opening a PR; must pass. Pending placeholders are allowed while v1 is built *(after scaffold)* |
+| `npm run spec:check -- --strict` | Fails on pending placeholders too; must pass for v1 to be complete *(after scaffold)* |
 | `npm run test:e2e` | When the dashboard or the API contract changes *(after scaffold)* |
 | `npm run seed` | Load ShopLite with the fixed end date, for tests *(after the seed task)* |
 | `npm run seed:demo` | Load ShopLite ending today, for viewing the dashboard *(after the seed task)* |
@@ -100,7 +106,7 @@ Run these from the repo root. Commands marked *(after scaffold)* exist once the 
 - Every interactive element must be keyboard-usable and have an accessible name (REQ-UI-09).
 
 ### Dependencies
-- **Don't add a dependency** unless the task needs it. If you add one, say why in the PR. Prefer the stack in the README.
+- **Don't add a dependency** unless the task needs it. Prefer the stack in the README. These are **pre-approved**: `multer` or `busboy`, `tsx`, `yaml`, `concurrently`, `jsdom`, `@testing-library/user-event`, `axe-core`, `@axe-core/playwright`, and ESLint/Prettier packages. Anything else needs a reason in the PR.
 - Never commit secrets, tokens, `.env` files, or database files.
 
 ---
@@ -112,9 +118,9 @@ One short-lived branch per task, from the latest `main`:
 
 | Prefix | For |
 |---|---|
-| `feat/` | New behavior (`feat/detector`) |
+| `feat/` | New behavior, including its tests (`feat/detector`) |
 | `fix/` | Bug fixes |
-| `test/` | Tests only (`test/acceptance`) |
+| `test/` | Tasks that only add tests (`test/shoplite-acceptance`) |
 | `docs/` | Documentation and spec (`docs/plan`) |
 | `chore/` | Tooling, config, and scaffolding (`chore/scaffold`) |
 | `ci/` | GitHub Actions workflows |
@@ -134,6 +140,7 @@ One short-lived branch per task, from the latest `main`:
 ## 8. Testing rules
 
 - **Name tests by requirement ID** (see [§3](#3-workflow-for-a-task)). `npm run spec:check` enforces this (REQ-NFR-05).
+- **Pending placeholders:** until a requirement has real tests, it's covered by a placeholder `it.todo("REQ-XXX-NN: pending")` in `test/traceability/pending/`. When you write the real tests for an ID, delete its placeholder in the same PR. Never add a placeholder for an ID that already has real tests.
 - **Deterministic only.** No real network calls, no real clock, and no randomness without a fixed seed. Set `FLAKEWATCH_NOW` in any test that depends on time.
 - **ShopLite tests** seed with default options and set `FLAKEWATCH_NOW=2026-10-24T00:00:00Z` (the default `--end`). Assert the **exact** values in SPEC §12, not approximate ranges.
 - **Isolated databases:** each integration test uses its own temporary SQLite file or in-memory database.

@@ -27,6 +27,16 @@ Copy this block to the **top** of the log, so the newest entry comes first:
 
 ## Log
 
+### R-05: Planning surfaced 22 questions the spec didn't answer
+- **Date:** 2026-10-25
+- **Found by:** planner (an agent with only SPEC v1.1 and AGENTS.md)
+- **Stage:** plan
+- **Requirement(s):** REQ-NFR-05, REQ-CI-01, REQ-UI-07, REQ-ING-10, and others (PLAN §7.1)
+- **What happened:** Turning the spec into tasks exposed 22 gaps (PQ-01 to PQ-22). The most important: REQ-NFR-05 and REQ-CI-01 together would keep CI red until the very last test existed. Others included how the dashboard sends the write token, cross-origin requests, and timestamp formats.
+- **Root cause:** The spec described the finished product, not how it would be built step by step. Two requirements that were each correct conflicted during development.
+- **Fix:** PQ-01 became SPEC v1.2 (pending placeholders, decision D-14). PQ-02 and PQ-21 were decided in the plan. The rest are answered before their tasks start.
+- **Lesson:** Plan against the spec before approving it fully. Ask "can every PR pass CI on the way there?", not just "is the end state right?"
+
 ### R-04: An independent review found 24 issues in a "finished" spec
 - **Date:** 2026-10-25
 - **Found by:** spec reviewer (an agent with no project context)

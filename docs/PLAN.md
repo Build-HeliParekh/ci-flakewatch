@@ -417,7 +417,7 @@ Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2
 
 | ID | Title | Branch(es) | Role | Depends on | REQs | Size | Status |
 |---|---|---|---|---|---|---|---|
-| T-01 | Scaffold | `chore/scaffold` | IM | — | None | M | Todo |
+| T-01 | Scaffold | `chore/scaffold` | IM | — | None | M | Done |
 | T-02 | spec:check + pending registry | `chore/spec-check` | Both | T-01 | NFR-05 | S | Todo |
 | T-03 | CI workflow `ci.yml` | `ci/pr-checks` | Both | T-02 | CI-01, 02, 03, 05 | S | Todo |
 | T-04 | Shared contracts | `feat/shared-contracts` | Both | T-03 | API-01 | S | Todo |
@@ -474,7 +474,7 @@ Each entry adds: parallelism, files it may touch, scope, and done notes. All tas
 
 **T-03 CI workflow** · `ci/pr-checks` · Both · depends: T-02 · parallel: — · REQs: REQ-CI-01, REQ-CI-02, REQ-CI-03, REQ-CI-05 · S
 - *Files:* `.github/workflows/ci.yml`, `test/ci/workflows.test.ts`, root `package.json` (`yaml` devDependency).
-- *Scope:* `ci.yml` named `ci`, on `pull_request` (branches `main`) and `push` (branches `main`); `ubuntu-latest`, Node 20, `actions/setup-node` with `cache: npm`; steps in order `npm ci` → `npm run lint` → `npm run build` → `npm test` → `npm run spec:check` → `npm run test:e2e`; a Playwright browser cache step (`~/.cache/ms-playwright`, keyed on the lockfile) plus `npx playwright install --with-deps chromium` before e2e; `actions/upload-artifact` for `reports/junit/` named `test-results`, `retention-days: 30`, `if: always()`; no `secrets.` reference. Tests parse the YAML and assert each acceptance criterion.
+- *Scope:* `ci.yml` named `ci`, on `pull_request` (branches `main`) and `push` (branches `main`); `ubuntu-latest`, Node 22, `actions/setup-node` with `cache: npm`; steps in order `npm ci` → `npm run lint` → `npm run build` → `npm test` → `npm run spec:check` → `npm run test:e2e`; a Playwright browser cache step (`~/.cache/ms-playwright`, keyed on the lockfile) plus `npx playwright install --with-deps chromium` before e2e; `actions/upload-artifact` for `reports/junit/` named `test-results`, `retention-days: 30`, `if: always()`; no `secrets.` reference. Tests parse the YAML and assert each acceptance criterion.
 - *Done:* tests green; CI runs on this PR itself and is green. The *(manual)* criteria of REQ-CI-01 and REQ-CI-03 are checked by a human (push a deliberately failing test on a throwaway branch) and noted in the PR. Admin applies the branch protection from SPEC §13.3.
 
 **T-04 Shared contracts** · `feat/shared-contracts` · Both · depends: T-03 · parallel: T-05, T-06, T-11, T-13 (after merge) · REQs: REQ-API-01 · S
@@ -888,7 +888,7 @@ These are points where the spec is silent or ambiguous **for planning purposes**
 | Planted-count interactions (e.g. payments failing every attempt from day −15 forces attempt 2 on those commits) could make the SEED-05 numbers hard to hit. | Generator-level tests in T-11 assert the counts before API work; T-24 is the final check; T-25 fixes; a genuine contradiction becomes a spec question. |
 | Several parallel tasks edit the same small files. | Skeletons created up front (T-16, T-26); each task adds a separate function/slot; rebase before review. |
 | An implementer edits a test to make it pass. | §2.2 diff check; reviewers reject any change to approved test files. |
-| `better-sqlite3` is a native module. | Node 20 prebuilt binaries on `ubuntu-latest`; npm cache in CI. |
+| `better-sqlite3` is a native module. | Node 22 prebuilt binaries on `ubuntu-latest`; npm cache in CI. |
 
 ### 7.3 Out of scope for this plan
 

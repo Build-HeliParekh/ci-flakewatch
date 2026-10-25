@@ -27,6 +27,16 @@ Copy this block to the **top** of the log, so the newest entry comes first:
 
 ## Log
 
+### R-06: The spec pinned a runtime that had reached end of life
+- **Date:** 2026-10-25
+- **Found by:** implementer (T-01 scaffold)
+- **Stage:** implementation
+- **Requirement(s):** REQ-CI-01
+- **What happened:** Installing the planned dependencies reported 9 known vulnerabilities, 2 of them critical, in the test tooling. The fixes needed newer major versions (Vitest 5, Vite 8, Zod 4, fast-xml-parser 5, React Router 7). Vitest 5 requires Node 22, but REQ-CI-01 said Node 20, which had reached end of life in April 2026.
+- **Root cause:** The spec and README named versions from memory without checking their support dates or current advisories.
+- **Fix:** SPEC v1.3 (Node.js 22, decision D-15); dependency upgrades approved and recorded in the scaffold PR.
+- **Lesson:** Check support dates and run `npm audit` when choosing versions, and write minimum versions as "current LTS" rather than a fixed number from memory.
+
 ### R-05: Planning surfaced 22 questions the spec didn't answer
 - **Date:** 2026-10-25
 - **Found by:** planner (an agent with only SPEC v1.1 and AGENTS.md)

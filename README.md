@@ -86,7 +86,7 @@ flowchart LR
 
 ## 🚀 Quick start
 
-**Prerequisites:** Node.js 20+ and npm 10+
+**Prerequisites:** Node.js 22.22+ (current Node 22 LTS) and npm 10+
 
 ```bash
 git clone https://github.com/Build-HeliParekh/ci-flakewatch.git
@@ -428,11 +428,11 @@ Statistics aren't stored as their own table. They're computed from these tables 
 | Layer | Choice |
 |---|---|
 | Language | TypeScript (strict) everywhere |
-| Frontend | React 18, Vite, React Router, TanStack Query, Recharts |
-| Backend | Node.js 20, Express, Zod, fast-xml-parser |
+| Frontend | React 18, Vite 8, React Router 7, TanStack Query 5, Recharts 2 |
+| Backend | Node.js 22, Express 4, Zod 4, fast-xml-parser 5 |
 | Database | SQLite via better-sqlite3 |
-| Testing | Vitest, Supertest, React Testing Library, Playwright, axe |
-| Tooling | npm workspaces, ESLint, Prettier |
+| Testing | Vitest 5, Supertest, React Testing Library, Playwright, axe |
+| Tooling | npm workspaces, TypeScript 5, ESLint 9, Prettier 3 |
 
 ## 📁 Project structure
 

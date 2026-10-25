@@ -1,0 +1,11 @@
+{
+  "name": "@flakewatch/bench",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Performance benchmarks (REQ-NFR-01).",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --root ../.. --project bench"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@flakewatch/spec-check",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Requirement traceability checker (REQ-NFR-05).",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --root ../.. --project spec-check"
+  }
+}

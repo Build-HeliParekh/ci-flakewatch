@@ -1,0 +1,11 @@
+{
+  "name": "@flakewatch/seed",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ShopLite synthetic data generator (SPEC §12).",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --root ../.. --project seed"
+  }
+}

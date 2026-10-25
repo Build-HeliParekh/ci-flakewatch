@@ -7,7 +7,7 @@
 Detect, rank, and quarantine flaky tests from CI results. Flakewatch ingests JUnit XML, flags tests that fail then pass on the same commit, ranks them by flake rate, and shows trends in a filterable dashboard backed by a REST API.
 
 ![status](https://img.shields.io/badge/status-in%20development-orange)
-![spec](https://img.shields.io/badge/spec-v1.0-blueviolet)
+![spec](https://img.shields.io/badge/spec-v1.1-blueviolet)
 ![stack](https://img.shields.io/badge/stack-React%20%2B%20Node%20%2B%20TypeScript-blue)
 ![format](https://img.shields.io/badge/input-JUnit%20XML-informational)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -552,7 +552,7 @@ it("REQ-DET-01: marks fail-then-pass on the same commit as flaky", () => { /* ..
 
 ## 🗺️ Roadmap
 
-- [x] `docs/SPEC.md` v1.0 with requirement IDs and acceptance criteria
+- [x] `docs/SPEC.md` with requirement IDs and acceptance criteria (v1.1)
 - [ ] ShopLite synthetic data generator with planted behaviors
 - [ ] JUnit XML parser adapter and ingestion endpoint
 - [ ] Flake detector and statuses
@@ -560,10 +560,12 @@ it("REQ-DET-01: marks fail-then-pass on the same commit as flaky", () => { /* ..
 - [ ] Dashboard: overview, filter chips, ranked table
 - [ ] Dashboard: test detail page with trend
 - [ ] Retention job
-- [ ] CI pipeline for this repo (lint, test, spec check, build), uploading its own results
+- [ ] GitHub Actions CI for this repo: lint, build, tests, spec check, end-to-end, test-report artifacts, and optional upload of its own results (SPEC §13.3)
+- [ ] Optional agent review of pull requests (REQ-CI-06)
 - [ ] Quarantine hysteresis (planned change PC-01)
 - [ ] Additional adapters: TRX, xUnit XML, NUnit XML, CTRF
-- [ ] A real sample repo with a deliberately flaky test for a live demo
+- [ ] Agent implements issues labelled `agent` (planned change PC-02)
+- [ ] A real sample repo with a deliberately flaky test for a live demo (PC-03, needs hosting)
 - [ ] Later: duration trend chart, per-upload new-flake counts, PostgreSQL support, Slack alerts for new quarantines, test ownership via CODEOWNERS
 
 ## ❓ FAQ

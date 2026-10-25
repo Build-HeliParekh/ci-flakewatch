@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Spec version** | 1.0 |
+| **Spec version** | 1.1 |
 | **Status** | Approved. Takes effect when merged to `main` |
 | **Owner** | Heli Parekh |
 | **Last updated** | 2026-10-25 |
@@ -70,7 +70,7 @@ Make flakiness visible and measurable: ingest test results from CI, detect flaky
 
 - **Requirement IDs** have the form `REQ-<AREA>-<NN>`, for example `REQ-DET-01`. IDs are never reused or renumbered. A removed requirement is marked **Withdrawn** and keeps its ID.
 - **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are used as in RFC 2119.
-- **Acceptance criteria** are written as *Given / When / Then*. Each requirement has at least one, and each acceptance criterion is covered by at least one automated test.
+- **Acceptance criteria** are written as *Given / When / Then*. Each requirement has at least one, and each acceptance criterion is covered by at least one automated test, except criteria marked *(manual)*, which can only be observed on GitHub ([§13.3](#133-continuous-integration-ci)).
 - **Test naming:** every automated test that covers a requirement starts its name with the ID, for example `it("REQ-DET-01: marks fail-then-pass on the same commit as flaky")`. One test may cover several IDs.
 - **Configuration values** are written in `UPPER_CASE` and defined in [§13.2](#132-configuration).
 - **Rounding:** "round" means round half up (away from zero for positive numbers). Character counts are in Unicode code points. 1 MB = 1,048,576 bytes.
@@ -819,6 +819,69 @@ With default options this gives exactly **384** commits: **44** in `7d` and **19
 
 An invalid value MUST stop the server from starting, with an error naming the variable.
 
+### 13.3 Continuous integration (CI)
+
+The repository's own pipeline runs on **GitHub Actions**. Workflow files live in `.github/workflows/`. Each workflow requirement is verified by an automated test that parses the workflow file (`test/ci/workflows.test.ts`). Acceptance criteria marked *(manual)* describe behavior that can only be observed on GitHub; they are checked once by a person when the workflow is first merged, and noted in the PR.
+
+#### REQ-CI-01
+**Pull request checks.** A workflow `ci.yml` MUST run on every `pull_request` targeting `main` and on every `push` to `main`. It MUST run these steps on Node.js 20 on `ubuntu-latest`, in this order, and fail if any step fails:
+
+| Step | Command |
+|---|---|
+| Install | `npm ci` |
+| Lint | `npm run lint` |
+| Type-check and build | `npm run build` |
+| Unit, integration, and acceptance tests | `npm test` |
+| Traceability | `npm run spec:check` |
+| End-to-end tests | `npm run test:e2e` |
+
+*Acceptance:*
+- Given `.github/workflows/ci.yml`, then it triggers on `pull_request` to `main` and `push` to `main`, and contains the six commands above in that order.
+- *(manual)* Given a pull request in which one unit test fails, then the `ci` check fails on GitHub.
+
+#### REQ-CI-02
+**No secrets for checks.** The checks in [REQ-CI-01](#req-ci-01) MUST NOT need any repository secret, network access beyond the npm registry and GitHub, or a running flakewatch server. Pull requests from forks must therefore pass or fail on their merits.
+
+*Acceptance:*
+- Given `ci.yml`, then no step before the optional upload ([REQ-CI-04](#req-ci-04)) references `secrets.`.
+
+#### REQ-CI-03
+**Test reports as artifacts.** `npm test` MUST write JUnit XML reports to `reports/junit/`. `ci.yml` MUST upload that folder as an artifact named `test-results`, kept for 30 days, **even when tests fail**.
+
+*Acceptance:*
+- Given `ci.yml`, then it has an upload-artifact step for `reports/junit/` named `test-results`, with `retention-days: 30` and `if: always()`.
+- *(manual)* Given a CI run with a failing test, then the `test-results` artifact still exists.
+
+#### REQ-CI-04
+**Dogfooding upload (optional).** When the repository variable `FLAKEWATCH_URL` and the secret `FLAKEWATCH_TOKEN` are both set, `ci.yml` MUST upload each JUnit report to `$FLAKEWATCH_URL/api/v1/results` with `repo`, `branch`, `commitSha`, `runId`, `attempt`, and `startedAt` taken from the GitHub run ([REQ-ING-01](#req-ing-01)). When either is missing, the step is skipped. The upload MUST NOT fail the build: an error is shown as a warning annotation.
+
+*Acceptance:*
+- Given `ci.yml`, then the upload step runs only when `vars.FLAKEWATCH_URL` is non-empty, has `continue-on-error: true`, and sends `github.sha`, `github.run_id`, and `github.run_attempt`.
+- *(manual)* Given `FLAKEWATCH_URL` is not set, then the step is shown as skipped and the run still passes.
+
+#### REQ-CI-05
+**Speed.** `ci.yml` MUST cache npm dependencies and Playwright browsers between runs, and SHOULD finish in under **10 minutes** on a pull request.
+
+*Acceptance:*
+- Given `ci.yml`, then it uses npm caching (via `actions/setup-node` `cache: npm`) and caches the Playwright browser folder.
+
+#### REQ-CI-06
+**Agent review (optional).** A workflow `agent-review.yml` MAY run an AI review agent on `pull_request` events (opened, synchronize). If present, it:
+- runs only when the secret `ANTHROPIC_API_KEY` is set, and is skipped otherwise
+- reviews the PR against `docs/SPEC.md` and `AGENTS.md`, posting comments only
+- MUST NOT approve, request changes as a blocking review, push commits, or merge
+- is never a required check
+
+*Acceptance:*
+- Given `agent-review.yml` exists, then it has no permission beyond `contents: read` and `pull-requests: write`, is conditioned on the secret, and contains no merge or push step.
+
+#### Repository settings (manual, not tested)
+
+These settings are made once on GitHub by a repository admin. They aren't requirements because they live outside the code:
+
+- Protect `main`: require a pull request, at least **1 approving human review**, and the `ci` check to pass before merging. Block direct pushes and force-pushes.
+- Add the repository variable `FLAKEWATCH_URL` and the secret `FLAKEWATCH_TOKEN` only once a hosted flakewatch exists ([Q-13](#151-decision-log)).
+
 ---
 
 ## 14. Change process
@@ -851,8 +914,13 @@ Questions raised while writing and reviewing the spec, and how they were settled
 | D-10 | Are statistics precomputed on a schedule or computed for each request? | **Computed as of one `now` per request; caching only if indistinguishable** ([REQ-STA-06](#req-sta-06)) | An hourly recompute could be up to an hour stale and mix as-of times in one response, which contradicts second-precise windows. | Recompute after each upload plus hourly | 2026-10-25 |
 | D-11 | Should commits be identified by short or full SHAs? | **Full 40-character SHAs only** ([REQ-ING-01](#req-ing-01)) | A short and a full SHA of the same commit would count as two commits and hide a flake. CI systems provide the full SHA. | Accept 7–40 characters and match prefixes | 2026-10-25 |
 | D-12 | Who can quarantine or release tests? | **Anyone with the write token, when one is set** ([REQ-ING-10](#req-ing-10)) | Without it, anyone could quarantine a test and silence it in CI, which contradicts D-06. | Open to all; separate admin token | 2026-10-25 |
+| D-13 | Should the CI checks depend on secrets or a running flakewatch? | **No.** Required checks need no secrets or server; uploading to flakewatch is an optional extra step ([REQ-CI-02](#req-ci-02), [REQ-CI-04](#req-ci-04)) | Checks must work for every PR, including forks and before any hosting exists. Dogfooding must never block a merge. | Make the upload a required step | 2026-10-25 |
 
-**Open questions:** none at the moment.
+**Open questions:**
+
+| # | Question | Current assumption | Options | Needed by |
+|---|---|---|---|---|
+| Q-13 | Where is flakewatch hosted so GitHub Actions can upload real results (dogfooding and the sample-repo demo)? | Not hosted; the upload step stays skipped | Deploy a small instance (e.g. Render, Fly.io, Railway); keep results as artifacts and upload them locally with a script; demo real data locally only | Before the real-data demo (PC-03) |
 
 ### 15.2 Planned changes
 
@@ -866,6 +934,18 @@ Changes already agreed for a later version. Each one becomes a spec pull request
 - **Planted test:** `checkout > calculates tax`, flaky at random on about 10% of commits (random draws, not exact counts, so its rate wobbles). Evaluated with `FLAKEWATCH_NOW` set to each of the scenario's last 30 days: before the change, its status flips at least twice; after the change, it stays `quarantined`.
 - **Affects:** [REQ-CLS-02](#req-cls-02), [REQ-QUA-04](#req-qua-04), [REQ-SEED-05](#req-seed-05), [§13.2](#132-configuration).
 
+#### PC-02: Agent implements labelled issues
+
+- **Change:** a workflow `agent-implement.yml` runs an implementer agent when an issue gets the `agent` label. The agent follows `AGENTS.md`, works on a new branch, and opens a pull request that links the issue. A human reviews and merges as usual.
+- **Guard rails:** runs only with the `ANTHROPIC_API_KEY` secret and only for issues labelled by a maintainer; the agent can't merge or push to `main` (enforced by branch protection).
+- **Affects:** [§13.3](#133-continuous-integration-ci).
+
+#### PC-03: Real-data demo with a sample repo
+
+- **Change:** a small separate repository (e.g. `ci-flakewatch-sample`) with a few real tests, one of them deliberately flaky. Its GitHub Actions workflow runs the tests and uploads the JUnit report to flakewatch after every run, using the upload step in the README. Re-running a failed workflow produces a real fail-then-pass on the same commit.
+- **Depends on:** Q-13 (hosting).
+- **Affects:** no flakewatch requirements; it uses the existing upload API.
+
 ---
 
 ## 16. Changelog
@@ -875,3 +955,4 @@ Changes already agreed for a later version. Each one becomes a spec pull request
 | 0.1 | 2026-10-25 | First draft |
 | 0.2 | 2026-10-25 | Recorded decisions D-01 to D-07. Added unconfirmed failures (REQ-STA-07) and planned change PC-01. |
 | 1.0 | 2026-10-25 | Applied the independent spec review (24 findings). Exact-count seeding with exact expected values (D-08). Deferred the duration trend and the per-upload new-flake count (D-09). Statistics computed per request (D-10). Full SHAs only (D-11). Write token required for quarantine (D-12). Added the trend definition, window-per-attempt rule (REQ-DET-06), consistent runs (REQ-ING-13), order of checks (REQ-ING-14), and `GET /quarantine` (REQ-QUA-05). Raised the minimum retention to 37 days. Renamed `failedRuns` to `failedAttempts`. Defined ordering, rounding, scopes, `lastSeenAt`, `quarantineSource`, and the generator's output format. Made performance targets benchmarks. Status set to approved. |
+| 1.1 | 2026-10-25 | Added §13.3 Continuous integration (REQ-CI-01 to REQ-CI-06) and decision D-13. Added open question Q-13 (hosting) and planned changes PC-02 (agent implements labelled issues) and PC-03 (sample-repo demo). Added *(manual)* acceptance criteria for behavior only visible on GitHub. |

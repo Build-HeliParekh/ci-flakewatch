@@ -228,12 +228,12 @@ These behaviors are planted on purpose, so the **correct answer is known in adva
 | Test | Planted behavior | flakewatch should report |
 |---|---|---|
 | `checkout > applies discount code` | Always passes | 🟢 `stable`, 0% |
-| `auth > redirects after sso` | Fails 40% of attempts at random | 🟠 `quarantined`, **ranked #1**, ~40% |
-| `cart > updates total` | Fails 15% of attempts at random | 🟠 `quarantined`, ~15% |
-| `search > paginates results` | Fails 5% of attempts at random | 🟡 `flaky`, ~5% |
-| `payments > refunds partial` | Fails every time after one specific commit | 🔴 `broken`, **not** flaky |
+| `auth > redirects after sso` | Flaky on 40% of commits (fails, then passes on retry) | 🟠 `quarantined`, **ranked #1**, ~40% |
+| `cart > updates total` | Flaky on 15% of commits | 🟠 `quarantined`, ~15% |
+| `search > paginates results` | Flaky on 5% of commits | 🟡 `flaky`, ~5% |
+| `payments > refunds partial` | Fails every time from 15 days before the end | 🔴 `broken`, **not** flaky |
 | `profile > uploads avatar` | Flaky only on `feature/avatar-v2` | Flaky on that branch, stable on `main` |
-| `orders > exports csv` | 30% flaky for 30 days, then fixed | High 30-day rate, ~0% 7-day rate, improving trend |
+| `orders > exports csv` | Flaky on 30% of commits, fixed 10 days before the end | ~20% over 30 days, 0% over 7 days, falling trend |
 | `catalog > syncs stock` → `catalog > syncs stock levels` | Renamed mid-history | Two separate test cases |
 | Everything else | Always passes | 🟢 `stable` |
 
@@ -253,7 +253,8 @@ Base path: `/api/v1`. All responses are JSON.
 |---|---|---|
 | `POST` | `/results` | Upload a JUnit XML report (multipart field `report`) with `repo`, `branch`, `commitSha`, `runId`, `attempt`, `startedAt` |
 | `GET` | `/repos` | List repos and their branches |
-| `GET` | `/tests` | Ranked list. Query: `repo`, `branch`, `window` (`7d`\|`30d`), `status`, `sort` (`flakeRate`\|`failedRuns`\|`name`), `page`, `pageSize` |
+| `GET` | `/summary` | Counts for the overview cards. Query: `repo`, `branch`, `window` |
+| `GET` | `/tests` | Ranked list. Query: `repo`, `branch`, `window` (`7d`\|`30d`, default `30d`), `status`, `q` (search), `sort` (`flakeRate`\|`failedRuns`\|`name`), `order`, `page`, `pageSize` |
 | `GET` | `/tests/:id` | Test details with stats for each window |
 | `GET` | `/tests/:id/history` | Results grouped by commit, plus daily flake-rate points |
 | `POST` | `/tests/:id/quarantine` | Quarantine manually. Body: `{ "reason": "..." }` |
@@ -275,7 +276,7 @@ curl -X POST http://localhost:4000/api/v1/results \
 ```
 
 ```json
-{ "runId": 42, "tests": 150, "passed": 146, "failed": 3, "skipped": 1, "newFlakes": 1 }
+{ "attemptId": 42, "tests": 150, "passed": 146, "failed": 3, "skipped": 1, "newFlakyCommits": 1 }
 ```
 
 </details>

@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Spec version** | 0.1 (draft) |
-| **Status** | In review |
+| **Spec version** | 0.2 (draft) |
+| **Status** | In review. Decisions recorded; awaiting spec review |
 | **Owner** | Heli Parekh |
 | **Last updated** | 2026-10-25 |
 
@@ -27,7 +27,7 @@ This document is the **source of truth** for flakewatch's behavior. Code, tests,
 12. [Synthetic data (SEED)](#12-synthetic-data-seed)
 13. [Non-functional (NFR)](#13-non-functional-nfr)
 14. [Change process](#14-change-process)
-15. [Open questions](#15-open-questions)
+15. [Decisions](#15-decisions)
 16. [Changelog](#16-changelog)
 
 ---
@@ -88,6 +88,7 @@ Make flakiness visible and measurable: ingest test results from CI, detect flaky
 | **Result** | One outcome of one test case in one upload: `passed`, `failed`, or `skipped`. |
 | **Decisive result** | A `passed` or `failed` result. `skipped` results are not decisive. |
 | **Flaky commit** | A commit on which a test case has at least one `failed` and at least one `passed` result ([REQ-DET-01](#req-det-01)). |
+| **Unconfirmed failure** | A commit on which a test case has only `failed` decisive results, so flakiness can't be confirmed ([REQ-STA-07](#req-sta-07)). |
 | **Window** | A time range for statistics: `7d` or `30d` ([REQ-STA-01](#req-sta-01)). |
 | **As-of time (`now`)** | The reference time windows are measured back from. The system clock by default, overridable for tests ([REQ-NFR-04](#req-nfr-04)). |
 | **Scope** | A `(window, branch)` pair that statistics are computed for. `branch` is a specific branch or `*` (all branches). |
@@ -251,6 +252,7 @@ If a `<testcase>` contains both `<skipped>` and `<failure>`/`<error>`, it is `fa
 | `flakyCommits` | Commits counted in `commitsRun` that are flaky commits ([REQ-DET-01](#req-det-01)) |
 | `flakeRate` | `flakyCommits / commitsRun`, or `0` when `commitsRun = 0`. Stored unrounded |
 | `failedRuns` | Distinct attempts in the scope with at least one `failed` result for the test case |
+| `unconfirmedFailures` | See [REQ-STA-07](#req-sta-07) |
 | `skippedResults` | Number of `skipped` results in the scope |
 | `lastSeenAt` | Latest `startedAt` of any attempt with a result for the test case, in any window |
 
@@ -281,6 +283,15 @@ If a `<testcase>` contains both `<skipped>` and `<failure>`/`<error>`, it is `fa
 
 *Acceptance:*
 - Given an upload responds `201`, when `GET /api/v1/tests` is called immediately afterwards, then the results of that upload are reflected.
+
+#### REQ-STA-07
+**Unconfirmed failures.** For each test case and scope, the system MUST compute `unconfirmedFailures`: the number of commits in `commitsRun` whose decisive results for the test case are **all** `failed`. These failures could be flaky or real, but there is no passing result on the same commit to tell. This includes a single failure that was never re-run, and a failure that also failed on re-run. They do not change the flake rate ([REQ-DET-01](#req-det-01)). See decision [D-03](#151-decision-log).
+
+*Acceptance:*
+- Given 30 commits where `d4` has one `failed` attempt and no re-run and the rest passed, then `unconfirmedFailures = 1`, `flakyCommits = 0`, and the status is `stable`.
+- Given commit `c3` with `failed`, `failed`, then it adds `1` to `unconfirmedFailures`.
+- Given commit `b2` with `failed`, `passed`, then it adds `0` to `unconfirmedFailures` and `1` to `flakyCommits`.
+- Given a `broken` test case, then its all-failing commits are also counted in `unconfirmedFailures`, and its status is still `broken`.
 
 ---
 
@@ -321,11 +332,11 @@ Each test case has one **status** per scope. They are evaluated **in this order*
 - Given `commitsRun = 40` and `flakyCommits = 2` (5%), then the status is `flaky`.
 
 #### REQ-CLS-04
-**Stable.** Any other test case with `commitsRun ≥ 1` is `stable`. A `stable` test case MAY have failed results that were not confirmed flaky (for example, one failure with no re-run). These still count in `failedRuns`. See [Q-03](#15-open-questions).
+**Stable.** Any other test case with `commitsRun ≥ 1` is `stable`. A `stable` test case MAY have failed results that were not confirmed flaky (for example, one failure with no re-run). These still count in `failedRuns` and in `unconfirmedFailures` ([REQ-STA-07](#req-sta-07)). See decision [D-03](#151-decision-log).
 
 *Acceptance:*
 - Given 30 commits all passing, then the status is `stable` with `failedRuns = 0`.
-- Given 30 commits where one has a single `failed` attempt and no re-run, then the status is `stable` with `failedRuns = 1`.
+- Given 30 commits where one has a single `failed` attempt and no re-run, then the status is `stable` with `failedRuns = 1` and `unconfirmedFailures = 1`.
 
 #### REQ-CLS-05
 **No data.** A test case with `commitsRun = 0` in a scope has no status in that scope and MUST NOT appear in that scope's ranked list ([REQ-API-03](#req-api-03)).
@@ -359,7 +370,7 @@ Each test case has one **status** per scope. They are evaluated **in this order*
 - Given a manually quarantined test case that also meets the automatic rule, then `quarantineSource = "both"`.
 
 #### REQ-QUA-04
-**Automatic release.** Automatic quarantine MUST be lifted as soon as the numbers no longer meet [REQ-CLS-02](#req-cls-02). There is no hysteresis in v1. See [Q-02](#15-open-questions).
+**Automatic release.** Automatic quarantine MUST be lifted as soon as the numbers no longer meet [REQ-CLS-02](#req-cls-02). There is no hysteresis in v1. See decision [D-02](#151-decision-log) and planned change [PC-01](#152-planned-changes).
 
 *Acceptance:*
 - Given a test case at 12% that becomes 9% after new passing commits, then it is no longer automatically quarantined.
@@ -429,7 +440,8 @@ Each item:
   "file": "tests/auth.test.ts", "classname": "auth",
   "status": "quarantined", "quarantineSource": "auto",
   "flakeRate": 0.4123, "flakyCommits": 82, "commitsRun": 199,
-  "failedRuns": 82, "skippedResults": 0, "lastSeenAt": "2026-10-23T22:14:00Z"
+  "failedRuns": 82, "unconfirmedFailures": 0, "skippedResults": 0,
+  "lastSeenAt": "2026-10-23T22:14:00Z"
 }
 ```
 
@@ -462,7 +474,7 @@ The response also includes `page`, `pageSize`, and `total`.
 
 #### REQ-API-06
 **Test history.** `GET /api/v1/tests/:id/history?branch=&window=` MUST return:
-- `commits`: the most recent 100 commits in the scope, newest first, each with `commitSha`, `branch`, `firstStartedAt`, `outcome` (`passed`, `failed`, or `flaky`), and its attempts' results and durations
+- `commits`: the most recent 100 commits in the scope, newest first, each with `commitSha`, `branch`, `firstStartedAt`, `outcome` (`passed`, `failed`, or `flaky`), `rerun` (`true` if more than one attempt has a result for the test case), and its attempts' results and durations
 - `trend`: the series from [REQ-STA-05](#req-sta-05) as `[{ "date": "2026-10-01", "flakeRate": 0.25 | null, "medianDurationMs": 1840 | null }]`
 
 *Acceptance:*
@@ -507,7 +519,7 @@ Changing a chip MUST update the cards and the table, and reset the table to page
 - Given a filtered view, when its URL is opened in a new tab, then the same chips are selected and the same rows are shown.
 
 #### REQ-UI-04
-**Ranked table.** Columns: rank, test name, file, status badge, flake rate, flaky commits / commits run, and failed runs. Flake rate and failed runs are sortable. The default sort matches [REQ-API-03](#req-api-03). Clicking a row opens the detail page.
+**Ranked table.** Columns: rank, test name, file, status badge, flake rate, flaky commits / commits run, and failed runs. Flake rate and failed runs are sortable. The default sort matches [REQ-API-03](#req-api-03). Clicking a row opens the detail page. When `unconfirmedFailures ≥ 1`, the status badge MUST be followed by a warning marker with the text label "N unconfirmed failure(s)" (as visible text or an accessible label, with a tooltip).
 
 *Acceptance:*
 - Given the ShopLite scenario with default filters, then the first row is `auth > redirects after sso` showing about `40%`.
@@ -530,7 +542,8 @@ Changing a chip MUST update the cards and the table, and reset the table to page
 - a window and branch selector (defaulting to the overview's current filters)
 - a flake-rate trend chart ([REQ-STA-05](#req-sta-05))
 - a median duration chart
-- a commit strip: one cell per recent commit, colored and labeled passed, failed, or flaky
+- a commit strip: one cell per recent commit, colored and labeled passed, failed, or flaky; a failed commit that was not re-run is labeled "failed (not re-run)"
+- the number of unconfirmed failures in the selected scope
 - the 5 most recent error messages
 - quarantine controls: **Quarantine** (asks for a reason) or **Release** (when manually quarantined)
 - a back link to the overview that keeps the previous filters
@@ -717,23 +730,39 @@ An invalid value MUST stop the server from starting, with an error naming the va
 2. **Version:** bump the spec version (minor for additions, major for changed or withdrawn behavior) and add a [Changelog](#16-changelog) entry.
 3. **Tests first:** update or add the tests for the affected IDs in the same pull request, or a linked one, before changing the implementation.
 4. **Implement:** change the code until `npm test` and `npm run spec:check` pass.
-5. **Never** change behavior in code without a matching spec change. If an agent or a person finds the spec silent or ambiguous, they raise it as an open question here instead of guessing.
+5. **Never** change behavior in code without a matching spec change. If an agent or a person finds the spec silent or ambiguous, they raise it as an open question in [§15](#15-decisions) instead of guessing.
 
 ---
 
-## 15. Open questions
+## 15. Decisions
 
-Decide each of these before the spec moves from **draft** to **approved**. The current answer is what the spec assumes for now.
+### 15.1 Decision log
 
-| # | Question | Current answer | Alternatives |
-|---|---|---|---|
-| Q-01 | Are the quarantine defaults right? | 10% flake rate with at least 20 commits | 5% / 15%; minimum 10 or 30 commits |
-| Q-02 | Should automatic quarantine have hysteresis so tests don't flip on and off? | No: lifted as soon as the rate drops below the threshold | Lift only below 5%, or only after 7 days below the threshold |
-| Q-03 | What about a test case that fails once with no re-run (not flaky, not broken)? | `stable`, but counted in `failedRuns` | A separate `failing` status, or treat as a suspected flake |
-| Q-04 | Are windows rolling from now, or calendar-based? | Rolling: the last 7 × 24 hours | From UTC midnight; or the user's time zone |
-| Q-05 | Should broken be decided by the last N commits on each branch, or across all branches? | Per scope: each branch on its own, and `*` across all | `main` only |
-| Q-06 | Should releasing a manual quarantine be able to override automatic quarantine? | No | Yes, with an "ignore until" date |
-| Q-07 | Is the default window 30 days? | Yes | 7 days |
+Questions raised while writing the spec, and how they were settled. New questions are added here as `Q-NN` until they are decided, then recorded as `D-NN`.
+
+| # | Question | Decision | Why | Alternatives considered | Date |
+|---|---|---|---|---|---|
+| D-01 | What are the automatic quarantine defaults? | **10% flake rate with at least 20 commits** ([REQ-CLS-02](#req-cls-02)) | 10% means a test breaks 1 in 10 builds, which clearly needs action. 20 commits is about a week on a busy repo: enough evidence without reacting too late. Both are configurable. | 5% or 15%; minimum 10 or 30 commits | 2026-10-25 |
+| D-02 | Should automatic quarantine have hysteresis so tests don't flip on and off? | **No in v1.** Quarantine is lifted as soon as the rate drops below the threshold ([REQ-QUA-04](#req-qua-04)). Hysteresis is planned as [PC-01](#152-planned-changes). | Keeps v1 simple to build, test, and explain. The flip-flop problem will be shown with planted data and then fixed by a spec change, which demonstrates the change process. | Lift only below 5%; lift only after 7 days below the threshold | 2026-10-25 |
+| D-03 | How is a test case that fails with no passing result on the same commit handled, when it's not broken? | **It stays `stable`, but is counted as an *unconfirmed failure*** and shown in the table and detail page ([REQ-STA-07](#req-sta-07), [REQ-CLS-04](#req-cls-04)). | Counting it as a flake would break the single flake rule. A new `failing` status would add rules for how long it lasts and how it ranks. A count keeps the rule clean and still makes the failure visible. | A separate `failing` status; treat it as a suspected flake | 2026-10-25 |
+| D-04 | Are windows rolling from now, or calendar-based? | **Rolling: the last 7 × 24 or 30 × 24 hours** ([REQ-STA-01](#req-sta-01)) | The numbers don't jump at midnight, and time zones don't matter. The trend chart already uses UTC days for its points. | From UTC midnight; the viewer's time zone | 2026-10-25 |
+| D-05 | Is broken decided per branch or across all branches? | **Per scope:** each branch on its own, and `*` across all branches ([REQ-CLS-01](#req-cls-01)) | `main` only would miss a branch where someone broke a test, which is where the broken label helps most: it tells the developer the problem is their change, not flakiness. | `main` only | 2026-10-25 |
+| D-06 | Can releasing a manual quarantine override automatic quarantine? | **No** ([REQ-QUA-02](#req-qua-02)) | Otherwise anyone could silence a test that the data says is flaky. | Yes, with an "ignore until" date (possible later feature) | 2026-10-25 |
+| D-07 | What is the default window? | **30 days** ([REQ-API-03](#req-api-03), [REQ-UI-02](#req-ui-02)) | It matches the success measure ("this month"), ranks on more data so the list is steadier, and shows fixed tests improving. 7 days is one click away. | 7 days | 2026-10-25 |
+
+**Open questions:** none at the moment.
+
+### 15.2 Planned changes
+
+Changes already agreed for a later version. Each one becomes a spec pull request ([§14](#14-change-process)) when it is scheduled.
+
+#### PC-01: Quarantine hysteresis (from D-02)
+
+- **Problem:** a test hovering around the threshold flips between `quarantined` and `flaky` as each new commit or the moving window nudges its rate across 10%. CI would then block on it one day and not the next.
+- **Change:** add `QUARANTINE_EXIT_THRESHOLD` (default `0.05`). A test enters automatic quarantine at `flakeRate ≥ QUARANTINE_THRESHOLD` and leaves only when `flakeRate < QUARANTINE_EXIT_THRESHOLD`. This needs a stored quarantine state, because the status now depends on the previous status.
+- **Exit value:** half the entry threshold is a rule of thumb, not a standard. It leaves a gap wider than normal day-to-day variation. The value is confirmed with the planted test below and is configurable.
+- **Planted test:** `checkout > calculates tax` with `p = 0.10`, hovering around the threshold. Before the change it flips status at least twice over the scenario's last 30 days. After the change it stays `quarantined`.
+- **Affects:** [REQ-CLS-02](#req-cls-02), [REQ-QUA-04](#req-qua-04), [REQ-SEED-05](#req-seed-05), [§13.2](#132-configuration).
 
 ---
 
@@ -742,3 +771,4 @@ Decide each of these before the spec moves from **draft** to **approved**. The c
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | 2026-10-25 | First draft |
+| 0.2 | 2026-10-25 | Recorded decisions D-01 to D-07. Added [REQ-STA-07](#req-sta-07) (unconfirmed failures) and showed them in the API ([REQ-API-03](#req-api-03), [REQ-API-06](#req-api-06)) and dashboard ([REQ-UI-04](#req-ui-04), [REQ-UI-07](#req-ui-07)). Added planned change PC-01 (quarantine hysteresis). |

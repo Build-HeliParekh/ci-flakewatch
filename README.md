@@ -160,6 +160,7 @@ This test fails a lot, but it's **not flaky**. It fails *every time* from `c3` o
 
 ### Edge cases
 
+- **Unconfirmed failures:** a commit where the test only failed (never re-run, or failed again on re-run) isn't counted as flaky, because there's no pass to compare with. It's counted separately and flagged with ⚠️ in the dashboard, so it isn't hidden.
 - **Skipped** results are ignored for detection and counted separately.
 - **Errors** (JUnit `<error>`) count as failures.
 - **Branch-only flakes:** stats are computed per branch and across all branches, so a flake that only happens on one branch is visible when filtered.
@@ -421,7 +422,8 @@ ci-flakewatch/
 ├── tools/
 │   └── seed/                 # ShopLite synthetic data generator
 ├── docs/
-│   └── SPEC.md               # requirements with IDs + acceptance criteria
+│   ├── SPEC.md               # requirements with IDs + acceptance criteria
+│   └── PRESENTATION-QA.md    # likely questions and answers for demos
 ├── e2e/                      # Playwright tests
 ├── .env.example
 ├── package.json              # npm workspaces root

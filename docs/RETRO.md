@@ -27,6 +27,16 @@ Copy this block to the **top** of the log, so the newest entry comes first:
 
 ## Log
 
+### R-07: The "Withdrawn" rule would have silently dropped a requirement
+- **Date:** 2026-10-25
+- **Found by:** implementer (T-02 spec checker), on its first run against the real spec
+- **Stage:** implementation
+- **Requirement(s):** REQ-NFR-05
+- **What happened:** The plan said a requirement is withdrawn if its heading or first body line *contains* "Withdrawn". REQ-NFR-05's first line says "every ID that is not **Withdrawn**", so the checker counted 73 requirements instead of 74 and stopped checking REQ-NFR-05 itself.
+- **Root cause:** The rule was written for the marker we expected, not checked against the real text. The fixture tests passed because they didn't include a body that merely mentions the word.
+- **Fix:** Withdrawn only if the heading says so or the first body line *starts* with the word; a regression test covers REQ-NFR-05's wording. PLAN §3.7 updated.
+- **Lesson:** Run new tooling against the real input, not only fixtures, and turn every surprise into a test.
+
 ### R-06: The spec pinned a runtime that had reached end of life
 - **Date:** 2026-10-25
 - **Found by:** implementer (T-01 scaffold)

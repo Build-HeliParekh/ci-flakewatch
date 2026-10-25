@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Spec version** | 1.2 |
+| **Spec version** | 1.3 |
 | **Status** | Approved. Takes effect when merged to `main` |
 | **Owner** | Heli Parekh |
 | **Last updated** | 2026-10-25 |
@@ -829,7 +829,7 @@ An invalid value MUST stop the server from starting, with an error naming the va
 The repository's own pipeline runs on **GitHub Actions**. Workflow files live in `.github/workflows/`. Each workflow requirement is verified by an automated test that parses the workflow file (`test/ci/workflows.test.ts`). Acceptance criteria marked *(manual)* describe behavior that can only be observed on GitHub; they are checked once by a person when the workflow is first merged, and noted in the PR.
 
 #### REQ-CI-01
-**Pull request checks.** A workflow `ci.yml` MUST run on every `pull_request` targeting `main` and on every `push` to `main`. It MUST run these steps on Node.js 20 on `ubuntu-latest`, in this order, and fail if any step fails:
+**Pull request checks.** A workflow `ci.yml` MUST run on every `pull_request` targeting `main` and on every `push` to `main`. It MUST run these steps on Node.js 22 on `ubuntu-latest`, in this order, and fail if any step fails:
 
 | Step | Command |
 |---|---|
@@ -921,6 +921,7 @@ Questions raised while writing and reviewing the spec, and how they were settled
 | D-12 | Who can quarantine or release tests? | **Anyone with the write token, when one is set** ([REQ-ING-10](#req-ing-10)) | Without it, anyone could quarantine a test and silence it in CI, which contradicts D-06. | Open to all; separate admin token | 2026-10-25 |
 | D-13 | Should the CI checks depend on secrets or a running flakewatch? | **No.** Required checks need no secrets or server; uploading to flakewatch is an optional extra step ([REQ-CI-02](#req-ci-02), [REQ-CI-04](#req-ci-04)) | Checks must work for every PR, including forks and before any hosting exists. Dogfooding must never block a merge. | Make the upload a required step | 2026-10-25 |
 | D-14 | How can the traceability check pass while v1 is still being built? | **Placeholder tests count as *pending*.** The normal check passes with pending IDs, and a `--strict` mode fails on them; v1 needs the strict check to pass ([REQ-NFR-05](#req-nfr-05)) | Otherwise CI, which runs the check on every PR ([REQ-CI-01](#req-ci-01)), would stay red until the very last test exists. Pending IDs stay visible, and the strict check keeps the goal of full coverage. | Leave the check out of CI until the end; add all tests as todos on day one | 2026-10-25 |
+| D-15 | Which Node.js version does flakewatch target? | **Node.js 22** in CI ([REQ-CI-01](#req-ci-01)) and as the minimum for local development | Node 20 reached end of life in April 2026, and the patched test tooling (Vitest 5) needs Node 22 or later. Node 22 is a long-term-support release with security fixes until April 2027, and matches the owner's machine. | Node 24 (longer support, but a local upgrade); stay on Node 20 (unsupported, and blocks security fixes) | 2026-10-25 |
 
 **Open questions:**
 
@@ -963,3 +964,4 @@ Changes already agreed for a later version. Each one becomes a spec pull request
 | 1.0 | 2026-10-25 | Applied the independent spec review (24 findings). Exact-count seeding with exact expected values (D-08). Deferred the duration trend and the per-upload new-flake count (D-09). Statistics computed per request (D-10). Full SHAs only (D-11). Write token required for quarantine (D-12). Added the trend definition, window-per-attempt rule (REQ-DET-06), consistent runs (REQ-ING-13), order of checks (REQ-ING-14), and `GET /quarantine` (REQ-QUA-05). Raised the minimum retention to 37 days. Renamed `failedRuns` to `failedAttempts`. Defined ordering, rounding, scopes, `lastSeenAt`, `quarantineSource`, and the generator's output format. Made performance targets benchmarks. Status set to approved. |
 | 1.1 | 2026-10-25 | Added §13.3 Continuous integration (REQ-CI-01 to REQ-CI-06) and decision D-13. Added open question Q-13 (hosting) and planned changes PC-02 (agent implements labelled issues) and PC-03 (sample-repo demo). Added *(manual)* acceptance criteria for behavior only visible on GitHub. |
 | 1.2 | 2026-10-25 | REQ-NFR-05: placeholder tests (`it.todo`) count as pending, and `--strict` fails on pending (decision D-14). Raised by the planner (PQ-01). |
+| 1.3 | 2026-10-25 | REQ-CI-01: CI runs on Node.js 22 instead of 20 (decision D-15). Found while scaffolding: Node 20 is end-of-life and blocks patched dependencies. |

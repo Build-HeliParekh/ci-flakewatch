@@ -460,8 +460,13 @@ ci-flakewatch/
 │   └── seed/                 # ShopLite synthetic data generator
 ├── docs/
 │   ├── SPEC.md               # requirements with IDs + acceptance criteria
+│   ├── RETRO.md              # spec gaps and agent mistakes, for the retrospective
 │   └── PRESENTATION-QA.md    # likely questions and answers for demos
 ├── e2e/                      # Playwright tests
+├── .github/
+│   └── pull_request_template.md
+├── AGENTS.md                 # standing rules for AI agents and contributors
+├── CLAUDE.md                 # points Claude Code to AGENTS.md
 ├── .env.example
 ├── package.json              # npm workspaces root
 └── README.md
@@ -600,6 +605,8 @@ With synthetic data, the right answer is known in advance, because the flakes ar
 </details>
 
 ## 🤝 Contributing
+
+Read [`AGENTS.md`](AGENTS.md) first. It has the rules for both AI agents and people.
 
 1. Create a branch from `main`.
 2. If behavior changes, update `docs/SPEC.md` first and reference the requirement IDs in your PR.

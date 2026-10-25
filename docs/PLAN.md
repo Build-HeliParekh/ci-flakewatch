@@ -395,7 +395,7 @@ Every integration test gets its own DB. ShopLite acceptance seeds once per test 
 
 **Fixed clock.** Pure functions take `now: Date`. HTTP tests use `createTestApp({ now })`, which puts `FLAKEWATCH_NOW` into the env object read by `envClock`. No test reads the real clock. Seeded randomness only (`createRng(seed)`).
 
-**spec:check.** Reads `docs/SPEC.md`, collects active IDs from `#### REQ-<AREA>-<NN>` headings (a requirement whose heading line or first body line contains **Withdrawn** is excluded). It parses every `**/*.{test,spec,bench}.{ts,tsx}` file outside `node_modules`/`dist` with the TypeScript compiler API and reads the titles of `it`/`test`/`bench` calls, including `.each`, `.concurrent`, `.skip`, and `.todo`. Then:
+**spec:check.** Reads `docs/SPEC.md`, collects active IDs from `#### REQ-<AREA>-<NN>` headings (a requirement is excluded when its heading contains **Withdrawn**, or its first body line *starts* with it; a body that only mentions the word, like REQ-NFR-05's, doesn't count). It parses every `**/*.{test,spec,bench}.{ts,tsx}` file outside `node_modules`/`dist` with the TypeScript compiler API and reads the titles of `it`/`test`/`bench` calls, including `.each`, `.concurrent`, `.skip`, and `.todo`. Then:
 
 - **missing** = active IDs not at the start of any `test`- or `todo`-kind title → error
 - **unknown** = any `REQ-…` ID anywhere in a title that is not in the spec → error, naming the ID and file
@@ -418,7 +418,7 @@ Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2
 | ID | Title | Branch(es) | Role | Depends on | REQs | Size | Status |
 |---|---|---|---|---|---|---|---|
 | T-01 | Scaffold | `chore/scaffold` | IM | — | None | M | Done |
-| T-02 | spec:check + pending registry | `chore/spec-check` | Both | T-01 | NFR-05 | S | Todo |
+| T-02 | spec:check + pending registry | `chore/spec-check` | Both | T-01 | NFR-05 | S | Done |
 | T-03 | CI workflow `ci.yml` | `ci/pr-checks` | Both | T-02 | CI-01, 02, 03, 05 | S | Todo |
 | T-04 | Shared contracts | `feat/shared-contracts` | Both | T-03 | API-01 | S | Todo |
 | T-05 | Clock and config | `feat/clock-config` | TW → IM | T-03 | NFR-04, RET-02 | S | Todo |

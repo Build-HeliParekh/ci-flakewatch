@@ -6,6 +6,13 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run --root ../.. --project spec-check"
+    "test": "vitest run --root ../.. --project spec-check",
+    "spec:check": "tsx src/cli.ts --spec docs/SPEC.md --root ../.."
+  },
+  "dependencies": {
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
   }
 }

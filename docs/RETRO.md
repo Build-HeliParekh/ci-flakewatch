@@ -27,6 +27,16 @@ Copy this block to the **top** of the log, so the newest entry comes first:
 
 ## Log
 
+### R-08: A test helper bug would have made a correct implementation fail
+- **Date:** 2026-10-25
+- **Found by:** test writer (T-13a), before handing the tests over
+- **Stage:** tests
+- **Requirement(s):** REQ-STA-07
+- **What happened:** The helper that builds fake commit SHAs padded labels with zeros, so `p1` and `p10` became the same SHA. One REQ-STA-07 test built 30 commits but really had fewer, so a correct implementation would have failed it.
+- **Root cause:** Test fixtures were trusted without being exercised. The stubs fail every test anyway, so a wrong test looks the same as a right one until something real runs against it.
+- **Fix:** SHAs are built by hex-encoding the label. Before handing over, the tests were run against a throwaway reference implementation (all 30 passed), which was then deleted.
+- **Lesson:** Before approving a test-writer stage, prove the tests can pass, for example with a quick throwaway implementation, and that they fail for the right reason.
+
 ### R-07: The "Withdrawn" rule would have silently dropped a requirement
 - **Date:** 2026-10-25
 - **Found by:** implementer (T-02 spec checker), on its first run against the real spec

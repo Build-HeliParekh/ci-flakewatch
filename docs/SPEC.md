@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Spec version** | 1.1 |
+| **Spec version** | 1.2 |
 | **Status** | Approved. Takes effect when merged to `main` |
 | **Owner** | Heli Parekh |
 | **Last updated** | 2026-10-25 |
@@ -799,8 +799,13 @@ With default options this gives exactly **384** commits: **44** in `7d` and **19
 #### REQ-NFR-05
 **Traceability.** Every `REQ-` ID in this document that is not **Withdrawn** MUST be referenced by at least one automated test name, and every `REQ-` ID in a test name MUST exist in this document. `npm run spec:check` MUST report both kinds of mismatch and exit non-zero if any exist. Performance benchmarks ([REQ-NFR-01](#req-nfr-01)) count as tests for this purpose.
 
+**Pending placeholders while v1 is being built.** An ID MAY be referenced only by a placeholder test, written as `it.todo("REQ-XXX-NN: pending")`. `npm run spec:check` lists such IDs as **pending** and still exits `0`. `npm run spec:check -- --strict` also fails if any ID is pending. v1 is complete only when the strict check passes. See decision [D-14](#151-decision-log).
+
 *Acceptance:*
 - Given a test named `REQ-DET-99: ...` and no `REQ-DET-99` in this spec, then `npm run spec:check` fails and names `REQ-DET-99`.
+- Given a spec ID with no test of any kind, then `npm run spec:check` fails and names it.
+- Given an ID referenced only by `it.todo("REQ-DET-01: pending")`, then `npm run spec:check` exits `0` and lists `REQ-DET-01` as pending, and `npm run spec:check -- --strict` fails and names it.
+- Given an ID referenced by a skipped test (`it.skip`), then it counts as **not** referenced.
 
 ### 13.2 Configuration
 
@@ -915,6 +920,7 @@ Questions raised while writing and reviewing the spec, and how they were settled
 | D-11 | Should commits be identified by short or full SHAs? | **Full 40-character SHAs only** ([REQ-ING-01](#req-ing-01)) | A short and a full SHA of the same commit would count as two commits and hide a flake. CI systems provide the full SHA. | Accept 7–40 characters and match prefixes | 2026-10-25 |
 | D-12 | Who can quarantine or release tests? | **Anyone with the write token, when one is set** ([REQ-ING-10](#req-ing-10)) | Without it, anyone could quarantine a test and silence it in CI, which contradicts D-06. | Open to all; separate admin token | 2026-10-25 |
 | D-13 | Should the CI checks depend on secrets or a running flakewatch? | **No.** Required checks need no secrets or server; uploading to flakewatch is an optional extra step ([REQ-CI-02](#req-ci-02), [REQ-CI-04](#req-ci-04)) | Checks must work for every PR, including forks and before any hosting exists. Dogfooding must never block a merge. | Make the upload a required step | 2026-10-25 |
+| D-14 | How can the traceability check pass while v1 is still being built? | **Placeholder tests count as *pending*.** The normal check passes with pending IDs, and a `--strict` mode fails on them; v1 needs the strict check to pass ([REQ-NFR-05](#req-nfr-05)) | Otherwise CI, which runs the check on every PR ([REQ-CI-01](#req-ci-01)), would stay red until the very last test exists. Pending IDs stay visible, and the strict check keeps the goal of full coverage. | Leave the check out of CI until the end; add all tests as todos on day one | 2026-10-25 |
 
 **Open questions:**
 
@@ -956,3 +962,4 @@ Changes already agreed for a later version. Each one becomes a spec pull request
 | 0.2 | 2026-10-25 | Recorded decisions D-01 to D-07. Added unconfirmed failures (REQ-STA-07) and planned change PC-01. |
 | 1.0 | 2026-10-25 | Applied the independent spec review (24 findings). Exact-count seeding with exact expected values (D-08). Deferred the duration trend and the per-upload new-flake count (D-09). Statistics computed per request (D-10). Full SHAs only (D-11). Write token required for quarantine (D-12). Added the trend definition, window-per-attempt rule (REQ-DET-06), consistent runs (REQ-ING-13), order of checks (REQ-ING-14), and `GET /quarantine` (REQ-QUA-05). Raised the minimum retention to 37 days. Renamed `failedRuns` to `failedAttempts`. Defined ordering, rounding, scopes, `lastSeenAt`, `quarantineSource`, and the generator's output format. Made performance targets benchmarks. Status set to approved. |
 | 1.1 | 2026-10-25 | Added §13.3 Continuous integration (REQ-CI-01 to REQ-CI-06) and decision D-13. Added open question Q-13 (hosting) and planned changes PC-02 (agent implements labelled issues) and PC-03 (sample-repo demo). Added *(manual)* acceptance criteria for behavior only visible on GitHub. |
+| 1.2 | 2026-10-25 | REQ-NFR-05: placeholder tests (`it.todo`) count as pending, and `--strict` fails on pending (decision D-14). Raised by the planner (PQ-01). |

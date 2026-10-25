@@ -429,7 +429,7 @@ Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2
 | T-10 | Upload endpoint `POST /results` | `feat/upload-endpoint` | TW → IM | T-07, T-09 | ING-01…03, 07…14 | M | Todo |
 | T-11 | ShopLite scenario generator | `feat/seed-scenario` | TW → IM | T-04 | SEED-03, 04, 05 | M/L | Todo |
 | T-12 | Seed output, manifest, CLI | `feat/seed-cli` | TW → IM | T-08, T-10, T-11 | SEED-01, 02, 06 | M | Todo |
-| T-13 | Detector and window statistics | `feat/detector` | TW → IM | T-04 | DET-01…06, STA-01, 02, 07 | M | Todo |
+| T-13 | Detector and window statistics | `feat/detector` | TW → IM | T-04 | DET-01…06, STA-01, 02, 07 | M | Tests in review |
 | T-14 | Statuses, scopes, quarantine rules | `feat/statuses` | TW → IM | T-13 | CLS-01…05, QUA-03, 04, STA-03 | M | Todo |
 | T-15 | Trend series | `feat/trend` | TW → IM | T-13 | STA-05 | S | Todo |
 | T-16 | Stats read service | `feat/stats-service` | TW → IM | T-06, T-14 | STA-03, STA-06 | M | Todo |

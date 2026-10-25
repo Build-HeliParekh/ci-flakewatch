@@ -19,7 +19,7 @@ Quick answers to questions likely to come up when presenting the project. Each a
 - Developers (which test to fix), tech leads (how bad is it, is it improving), and CI pipelines (which failures not to block on).
 
 **How do you know it works?**
-- Success measure: a developer can name the five flakiest tests, and how many failed runs each caused this month, **within 30 seconds** of opening the dashboard (SPEC §1.3).
+- Success measure: a developer can name the five flakiest tests, and how many failed attempts each caused this month, **within 30 seconds** of opening the dashboard (SPEC §1.3).
 - It's checked by an end-to-end test (REQ-NFR-02).
 
 **Doesn't GitHub, Jenkins, or another tool already do this?**
@@ -37,6 +37,7 @@ Quick answers to questions likely to come up when presenting the project. Each a
 
 **Why use the commit SHA?**
 - It proves two runs tested identical code. Without it you can't tell "flaky" from "someone changed the code".
+- Only full 40-character SHAs are accepted, so a short and a long SHA of one commit can't be counted as two commits and hide a flake (decision D-11).
 
 **How is the flake rate calculated?**
 - Flake rate = flaky commits ÷ commits the test ran on, within the window.
@@ -44,7 +45,7 @@ Quick answers to questions likely to come up when presenting the project. Each a
 
 **Why count commits and not runs?**
 - Re-runs would distort it: five re-runs of one bad commit shouldn't make a test look five times worse.
-- Commits measure **reliability**. Failed runs are tracked separately and measure **cost**.
+- Commits measure **reliability**. Failed attempts are tracked separately and measure **cost**.
 
 **What about retries inside one run (e.g. Jest retries)?**
 - Each occurrence of the test in the report is stored as its own result (REQ-ING-06), so fail-then-pass in one run is detected too.
@@ -69,7 +70,7 @@ Quick answers to questions likely to come up when presenting the project. Each a
 **Why is "broken" separate from "flaky"?**
 - They mean opposite things: flaky means fix the **test**; broken means fix the **code**.
 - If broken tests were treated as flaky, a real bug could be quarantined and silenced.
-- That's why broken always wins, even over manual quarantine.
+- That's why broken always wins, even over manual quarantine, and why broken tests never appear in the CI quarantine list.
 
 **What if a test fails once and nobody re-runs it?**
 - It's not flaky (no pass to compare) and not broken (only one commit).
@@ -81,8 +82,8 @@ Quick answers to questions likely to come up when presenting the project. Each a
 ## 4. Quarantine
 
 **What does quarantine actually do?**
-- Flakewatch only **marks** tests as quarantined and exposes the list through the API (REQ-QUA-05).
-- Your CI decides what to do with that list, e.g. don't block a merge on those failures.
+- Flakewatch only **marks** tests as quarantined.
+- CI fetches the complete list from one endpoint, `GET /api/v1/quarantine?repo=…` (REQ-QUA-05), and decides what to do with it, e.g. don't block a merge on those failures.
 - Flakewatch never skips or re-runs tests itself (out of scope for v1).
 
 **Why 10% and 20 commits?** (decision D-01)
@@ -100,9 +101,9 @@ Quick answers to questions likely to come up when presenting the project. Each a
 - A rule of thumb: half the entry threshold. It leaves a gap bigger than normal day-to-day wobble.
 - It's not a standard. It will be confirmed with the planted test, and it's configurable.
 
-**Can someone just un-quarantine a test?**
-- They can release a **manual** quarantine, but not override an **automatic** one (decision D-06).
-- Otherwise anyone could silence a test the data says is flaky.
+**Who can quarantine or un-quarantine a test?**
+- Anyone with the write token, when one is set (decision D-12). Otherwise anyone could silence a test.
+- A **manual** quarantine can be released, but an **automatic** one can't be overridden (decision D-06).
 
 ---
 
@@ -111,6 +112,7 @@ Quick answers to questions likely to come up when presenting the project. Each a
 **What do "7 days" and "30 days" mean?**
 - Rolling windows: the last 7 × 24 or 30 × 24 hours from now (decision D-04).
 - No jumps at midnight, no time-zone issues.
+- Every number in one response uses the same "now", so nothing is stale or mixed (decision D-10).
 
 **Why is 30 days the default?** (decision D-07)
 - It matches the success measure ("this month"), gives steadier rankings on more data, and shows fixed tests improving.
@@ -119,6 +121,9 @@ Quick answers to questions likely to come up when presenting the project. Each a
 - Stats are computed per branch and across all branches (REQ-STA-03).
 - A test flaky only on a feature branch shows up when you filter to that branch.
 - Broken is also decided per branch (decision D-05), which tells a developer that their change broke it.
+
+**How long is data kept?**
+- 90 days by default, and never less than 37: the 30-day trend chart looks back a further 7 days (REQ-RET-02).
 
 ---
 
@@ -131,8 +136,12 @@ Quick answers to questions likely to come up when presenting the project. Each a
 
 **Why synthetic data instead of real data?**
 - With synthetic data, the right answer is known in advance, because the flakes are planted.
-- That lets the tests prove correctness, e.g. "the 40% test ranks #1 at 35–45%".
 - It's repeatable (fixed seed), needs no network, and can force rare edge cases.
+
+**Why plant exact counts instead of random flakes?** (decision D-08)
+- The spec review found that with random coin flips, even a correct generator would pass every expected range only about 55% of the time.
+- So the generator picks **exactly** 40% of eligible commits to flake for a 40% test.
+- The tests can then check exact values, e.g. "`auth > redirects after sso` is flaky on exactly 77 of 192 commits", and never fail by chance.
 
 **Isn't synthetic data unrealistic?**
 - Yes, it's only as realistic as our assumptions, and that's a known limitation.
@@ -140,14 +149,14 @@ Quick answers to questions likely to come up when presenting the project. Each a
 
 **What is ShopLite?**
 - A fictional online store that all the synthetic data describes, so the data tells one story.
-- 8 modules (auth, catalog, search, cart, checkout, payments, orders, profile), 150 tests, 60 days, about 400 commits, and 4 branches.
+- 8 modules (auth, catalog, search, cart, checkout, payments, orders, profile), 150 tests, 60 days, 384 commits, and 4 branches.
 
-**What's planted in the data?**
-- `auth > redirects after sso`: flaky on 40% of commits, should rank #1.
+**What's planted in the data?** (30-day view)
+- `auth > redirects after sso`: flaky on 40% of commits (77/192). Ranks #1.
 - `cart > updates total`: 15%, quarantined. `search > paginates results`: 5%, flaky.
 - `payments > refunds partial`: broken from 15 days before the end. Must be broken, not flaky.
-- `profile > uploads avatar`: flaky only on `feature/avatar-v2`.
-- `orders > exports csv`: fixed 10 days before the end, so high over 30 days and 0% over 7.
+- `profile > uploads avatar`: flaky only on `feature/avatar-v2` (quarantined there, stable on `main`).
+- `orders > exports csv`: fixed 10 days before the end, so 19.3% over 30 days and 0% over 7.
 - `catalog > syncs stock`: renamed, so it becomes two tests.
 
 **Do you need a real repo to create flaky tests?**
@@ -172,6 +181,15 @@ Quick answers to questions likely to come up when presenting the project. Each a
 - **A gap in the statuses.** A single failure with no re-run fit no status. It led to the unconfirmed-failures decision (D-03).
 - All three were found before writing a line of code, which is the point of spec-first.
 
+**What did the independent spec review find?** (second good story)
+- A reviewer agent that had never seen the project read only the spec, and found **5 high, 14 medium, and 5 low** issues.
+- **Biggest catch:** with random flakes, the test data would pass only about 55% of the time, so the tests themselves would have been flaky. That led to exact counts (D-08).
+- **Security gap:** anyone could quarantine a test and silence it in CI, which contradicted our own rule. The write token is now required (D-12).
+- **Silent bug in CI use:** the quarantine list was paginated, so a CI script could miss tests. It's now its own complete endpoint.
+- **Data design:** "recompute hourly" could serve numbers up to an hour stale. Stats are now computed per request (D-10).
+- **A wrong expectation:** the draft said a trend "falls to 0 in the last 10 days". With a 7-day trailing window, it's only 0 for the last 4 days.
+- All 24 were fixed in wording before any code. The spec went from v0.2 to v1.0.
+
 ---
 
 ## 8. How it was built: agentic development
@@ -180,6 +198,10 @@ Quick answers to questions likely to come up when presenting the project. Each a
 - Agents do the work, the human makes the decisions.
 - **Spec reviewer** finds gaps. **Planner** breaks the spec into tasks. **Test writer** turns REQ-IDs into failing tests. **Implementers** build each module. **Reviewer** checks PRs against the spec.
 - The human approves the spec and the plan, reviews the tests, and merges every PR. Agents never merge their own work.
+
+**Why use a separate agent to review the spec?**
+- The author knows what they *meant*, so they read past gaps. A reviewer with no context reads only what's *written*, as an implementer would.
+- It found 24 issues in a spec we thought was finished (see §7).
 
 **How do you stop agents going off track?**
 - Small, bounded tasks with linked requirement IDs.
@@ -203,20 +225,21 @@ Quick answers to questions likely to come up when presenting the project. Each a
 - Zero setup, a single file, fast enough for this scale. It sits behind a repository interface, so PostgreSQL can replace it later.
 
 **How fast is it?**
-- Targets (REQ-NFR-01): ranked list under 300 ms, history under 500 ms, a 150-test upload under 1 s, full seed under 2 minutes.
+- Benchmarks (REQ-NFR-01, on a GitHub Actions runner): ranked list under 300 ms, history under 500 ms, a 150-test upload under 200 ms, full seed under 2 minutes.
+
+**How do the numbers stay current?**
+- They're computed as of the moment of each request, from one clock, so every number in a response agrees (REQ-STA-06).
+- Tests fix the clock with `FLAKEWATCH_NOW`, so results are repeatable.
 
 **What if the same report is uploaded twice?**
 - It replaces the earlier one and never double-counts (REQ-ING-07).
 
+**What if an upload has several problems at once?**
+- One fixed order of checks: token (401) → size (413) → metadata (400) → report (422) (REQ-ING-14).
+
 **Is it secure?**
-- An optional upload token protects writes (REQ-ING-10). Read endpoints are open.
+- An optional write token protects uploads and quarantine changes (REQ-ING-10). Read endpoints are open.
 - No user accounts in v1 (out of scope). Tokens and report contents are never logged (REQ-NFR-03).
-
-**How do stats stay current?**
-- Recomputed for affected tests on every upload, before it responds, and hourly so windows move forward (REQ-STA-06).
-
-**How long is data kept?**
-- Raw results for 90 days by default, never less than 30 (the largest window) (REQ-RET-01, REQ-RET-02).
 
 ---
 
@@ -226,7 +249,7 @@ Quick answers to questions likely to come up when presenting the project. Each a
 - Renamed tests aren't linked.
 - Quarantine can flip near the threshold until PC-01 is done.
 - JUnit XML only in v1.
-- No user accounts or permissions.
+- No user accounts or permissions, just one shared write token.
 - Synthetic data is only as realistic as its assumptions.
 - A failure that's never re-run can't be confirmed as flaky. It's flagged, not scored.
 
@@ -234,6 +257,7 @@ Quick answers to questions likely to come up when presenting the project. Each a
 - PC-01 hysteresis.
 - TRX, xUnit, NUnit, and CTRF adapters.
 - A real sample repo for live demos.
+- A duration trend chart and per-upload new-flake counts (deferred from v1, decision D-09).
 - PostgreSQL support.
 - Slack alerts for new quarantines.
 - Test ownership via CODEOWNERS.
@@ -241,4 +265,4 @@ Quick answers to questions likely to come up when presenting the project. Each a
 
 ---
 
-*Last updated: 2026-10-25 · Spec version 0.2*
+*Last updated: 2026-10-25 · Spec version 1.0*

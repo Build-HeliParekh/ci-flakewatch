@@ -1,7 +1,13 @@
 // Statuses, quarantine source, and scopes (SPEC §7, REQ-QUA-03, REQ-QUA-04, REQ-STA-03).
 // Pure functions; inputs are for a single test case in one scope.
-import type { QuarantineSource, Scope, Status } from "@flakewatch/shared";
-import type { CommitSummary } from "./detector.js";
+import {
+  ALL_BRANCHES,
+  WINDOWS,
+  type QuarantineSource,
+  type Scope,
+  type Status,
+} from "@flakewatch/shared";
+import { compareCodePoints, type CommitSummary } from "./detector.js";
 import type { ScopeCounts } from "./stats.js";
 
 export interface StatusRules {
@@ -18,17 +24,23 @@ export interface StatusRules {
  * (REQ-CLS-01). `commits` is ordered oldest first, as returned by `summarizeCommits`.
  */
 export function isBroken(commits: readonly CommitSummary[], brokenMinCommits: number): boolean {
-  return notImplemented("isBroken", commits, brokenMinCommits);
+  if (brokenMinCommits < 1 || commits.length < brokenMinCommits) return false;
+  return commits.slice(-brokenMinCommits).every((commit) => commit.outcome === "failed");
 }
 
 /** flakeRate ≥ threshold AND commitsRun ≥ minimum commits (REQ-CLS-02). */
 export function meetsAutoQuarantine(counts: ScopeCounts, rules: StatusRules): boolean {
-  return notImplemented("meetsAutoQuarantine", counts, rules);
+  return (
+    counts.commitsRun >= rules.quarantineMinCommits && counts.flakeRate >= rules.quarantineThreshold
+  );
 }
 
 /** The REQ-QUA-03 table: auto + manual → both, one → that one, neither → null. */
 export function quarantineSourceOf(auto: boolean, manual: boolean): QuarantineSource | null {
-  return notImplemented("quarantineSourceOf", auto, manual);
+  if (auto && manual) return "both";
+  if (auto) return "auto";
+  if (manual) return "manual";
+  return null;
 }
 
 export interface StatusInput {
@@ -42,13 +54,25 @@ export interface StatusInput {
 /**
  * The status in one scope, first match wins: broken → quarantined → flaky → stable, or `null`
  * when the scope has no data (REQ-CLS-05). `quarantineSource` describes which quarantine
- * conditions hold, regardless of the status (REQ-QUA-03).
+ * conditions hold, regardless of the status (REQ-QUA-03). A manually quarantined test case
+ * with no data has status `null` and source `manual` (accepted in the T-14 test review).
  */
 export function resolveStatus(input: StatusInput): {
   status: Status | null;
   quarantineSource: QuarantineSource | null;
 } {
-  return notImplemented("resolveStatus", input);
+  const { counts, commits, manual, rules } = input;
+  const auto = meetsAutoQuarantine(counts, rules);
+  const quarantineSource = quarantineSourceOf(auto, manual);
+
+  let status: Status | null;
+  if (counts.commitsRun === 0) status = null;
+  else if (isBroken(commits, rules.brokenMinCommits)) status = "broken";
+  else if (auto || manual) status = "quarantined";
+  else if (counts.flakyCommits > 0) status = "flaky";
+  else status = "stable";
+
+  return { status, quarantineSource };
 }
 
 /**
@@ -56,9 +80,10 @@ export function resolveStatus(input: StatusInput): {
  * then branch (`*` first, then code-point order) (REQ-STA-03, REQ-API-05).
  */
 export function scopesFor(branchesWithResults: readonly string[]): Scope[] {
-  return notImplemented("scopesFor", branchesWithResults);
-}
-
-function notImplemented(name: string, ...args: unknown[]): never {
-  throw new Error(`${name} is not implemented yet (T-14b); called with ${args.length} argument(s)`);
+  const branches = [...new Set(branchesWithResults)]
+    .filter((branch) => branch !== ALL_BRANCHES)
+    .sort(compareCodePoints);
+  return WINDOWS.flatMap((window) =>
+    [ALL_BRANCHES, ...branches].map((branch): Scope => ({ window, branch })),
+  );
 }

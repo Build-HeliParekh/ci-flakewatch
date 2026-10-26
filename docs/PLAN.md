@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Plan version** | 1.0 |
+| **Plan version** | 1.1 |
 | **Based on** | `docs/SPEC.md` v1.2 |
 | **Status** | Draft — awaiting human approval (PQ-01, PQ-02, PQ-21 decided) |
 | **Date** | 2026-10-25 |
@@ -412,6 +412,34 @@ T-02 creates one pending placeholder per active ID (except REQ-NFR-05, which T-0
 ## 4. Task list
 
 Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2). **Size:** S ≈ < 150 changed lines, M ≈ 150–400, L > 400 (should be split). Line counts exclude fixtures and generated files. "All later tasks" implicitly depend on **T-03** so CI checks every PR.
+
+### 4.0 Review groups (plan v1.1)
+
+From T-08 onward, the remaining tasks are delivered in **12 review groups** instead of one pull request per task. Tricky areas with many edge cases stay small; straightforward ones are bundled. Decided by the owner on 2026-10-25 to reduce review overhead while keeping small steps where mistakes are most likely.
+
+| Group | Name | Tasks | Branch | Size |
+|---|---|---|---|---|
+| G1 | JUnit parser | T-08 | `feat/junit-parser` | small |
+| G2 | Ingest storage | T-09 | `feat/ingest-service` | small |
+| G3 | Upload endpoint | T-10 | `feat/upload-endpoint` | small |
+| G4 | ShopLite data | T-11, T-12 | `feat/shoplite-data` | package |
+| G5 | Read API: list and summary | T-17, T-18 | `feat/read-api-list` | package |
+| G6 | Read API: detail, history, quarantine | T-19, T-20, T-21, T-22 | `feat/read-api-detail` | package |
+| G7 | Retention and ShopLite acceptance | T-23, T-24 (and T-25 if needed) | `feat/retention-acceptance` | small |
+| G8 | Dashboard: overview | T-26, T-27, T-28, T-29 | `feat/dashboard-overview` | package |
+| G9 | Dashboard: detail page | T-30, T-31 | `feat/dashboard-detail` | package |
+| G10 | End-to-end and accessibility | T-32, T-33, T-34 | `test/e2e-a11y` | package |
+| G11 | Benchmarks and CI extras | T-35, T-36, T-37 (optional) | `ci/bench-extras` | package |
+| G12 | Close-out | T-38 | `docs/v1-closeout` | small |
+
+**How a group works.** It follows the same test-first flow as a task pair (§2.2), on one branch and one pull request:
+
+1. The test writer adds the tests for **every task in the group** (and their stubs), in one or more `test:` commits, and opens a draft PR titled `G<n>: <name>`.
+2. The human reviews and approves the tests at a commit SHA (`tests-approved` label).
+3. The implementer adds the code for every task in the group, without changing approved tests.
+4. The human reviews the implementation and merges.
+
+**What doesn't change.** Task IDs, their requirement IDs (§4.1, §6), and their scope and done criteria (§4.2) stay as they are. Each task row's *Status* is still updated, and the group's PR lists every task and requirement it covers. Groups G1–G4 and G8–G9 can run in parallel; G5–G7 need G1–G4 for real data.
 
 ### 4.1 Summary table
 
@@ -918,3 +946,4 @@ Each becomes a spec PR first (SPEC §14) and then a plan update.
 |---|---|---|
 | 1.0 | 2026-10-25 | First draft for human approval. |
 | 1.0 (rev.) | 2026-10-25 | Human decisions applied before approval: PQ-01 (pending placeholders, SPEC v1.2), PQ-02 (one branch and one PR per pair), PQ-21 (dependencies approved). |
+| 1.1 | 2026-10-25 | Remaining tasks (T-08 onward) delivered in 12 review groups (§4.0), decided by the owner. Task IDs, requirements, and scope unchanged. |

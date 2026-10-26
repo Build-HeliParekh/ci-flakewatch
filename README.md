@@ -86,7 +86,14 @@ flowchart LR
 
 ## 🚀 Quick start
 
-**Prerequisites:** Node.js 22.22+ (current Node 22 LTS) and npm 10+
+**Prerequisites:** Node.js 22.22+ (current Node 22 LTS) and npm 10+. Check before installing:
+
+```bash
+node -v   # v22.22.0 or newer
+npm -v    # 10.x or newer
+```
+
+> ⚠️ An older npm (for example npm 6) can't install npm workspaces and rewrites `package-lock.json` in an old format. If that happens, run `git checkout -- package-lock.json`, upgrade Node, delete `node_modules`, and install again.
 
 ```bash
 git clone https://github.com/Build-HeliParekh/ci-flakewatch.git

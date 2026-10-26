@@ -31,7 +31,7 @@ Standing instructions for **every AI coding agent** (and human contributor) work
 
 ## 3. Workflow for a task
 
-Tasks come from `docs/PLAN.md`. Most are a **pair**: a test writer stage (`T-nna`) and an implementer stage (`T-nnb`) that share **one branch and one pull request** (PLAN §2.2).
+Tasks come from `docs/PLAN.md`. Most are a **pair**: a test writer stage (`T-nna`) and an implementer stage (`T-nnb`) that share **one branch and one pull request** (PLAN §2.2). From T-08 onward, tasks are delivered in **review groups** (PLAN §4.0): one branch and one pull request per group, with the tests for every task in the group written and approved before any of its code.
 
 1. **Read** this file, the task in `docs/PLAN.md`, and every requirement ID it lists.
 2. **Test writer:** create the branch from the latest `main` (naming in [§7](#7-git-and-pull-requests)). Write the failing tests first. Every test covering a requirement starts its name with the ID:
@@ -108,6 +108,8 @@ Run these from the repo root. Commands marked *(after scaffold)* exist once the 
 ### Dependencies
 - **Don't add a dependency** unless the task needs it. Prefer the stack in the README. These are **pre-approved**: `multer` or `busboy`, `tsx`, `yaml`, `concurrently`, `jsdom`, `@testing-library/user-event`, `axe-core`, `@axe-core/playwright`, and ESLint/Prettier packages. Anything else needs a reason in the PR.
 - Never commit secrets, tokens, `.env` files, or database files.
+- **Never run `npm install` or `npm ci` in a folder you share with a person on a different operating system** (for example, from a Linux shell into a folder on the owner's Mac). npm installs platform-specific binaries (esbuild, Rollup, SQLite), so the owner's tools would stop working. Run installs and checks in your own workspace, and copy only source files into the shared folder. See RETRO R-10.
+- Never commit a `package-lock.json` that a different npm major version rewrote. Only the project's npm (10+) should change it.
 
 ---
 

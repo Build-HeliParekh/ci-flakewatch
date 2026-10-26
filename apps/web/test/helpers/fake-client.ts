@@ -2,6 +2,9 @@
 // filters, sorts, and pages like the real API (REQ-API-03), and records every call.
 import {
   STATUSES,
+  type HistoryQuery,
+  type HistoryResponse,
+  type TestDetailResponse,
   type ReposResponse,
   type Status,
   type SummaryQuery,
@@ -94,9 +97,18 @@ export interface FakeClient extends ApiClient {
   resume(): void;
 }
 
-export function createFakeClient(
-  options: { repos?: ReposResponse; items?: TestListItem[] } = {},
-): FakeClient {
+export interface FakeOptions {
+  repos?: ReposResponse;
+  items?: TestListItem[];
+  /** Detail responses by id; quarantine and release update them. */
+  details?: Record<number, TestDetailResponse>;
+  /** History by id and scope. */
+  history?: (id: number, query: HistoryQuery) => HistoryResponse;
+  /** When set, quarantine and release need this token (REQ-ING-10). */
+  requireToken?: string;
+}
+
+export function createFakeClient(options: FakeOptions = {}): FakeClient {
   const repos: ReposResponse = options.repos ?? {
     items: [
       {
@@ -175,19 +187,53 @@ export function createFakeClient(
       }),
 
     test: (id) =>
-      respond("test", id, () =>
-        Promise.reject(new ApiClientError(404, "NOT_FOUND", `No test ${id}`)),
-      ),
+      respond("test", id, () => {
+        const detail = options.details?.[id];
+        if (!detail) return Promise.reject(new ApiClientError(404, "NOT_FOUND", `No test ${id}`));
+        return structuredClone(detail);
+      }),
     history: (id, query) =>
-      respond("history", { id, ...query }, () =>
-        Promise.reject(new ApiClientError(404, "NOT_FOUND", "No history")),
-      ),
-    quarantine: (id, body) =>
-      respond("quarantine", { id, ...body }, () => ({
-        manualQuarantine: { reason: body.reason, at: AS_OF },
-      })),
-    release: (id) => respond("release", id, () => undefined),
+      respond("history", { id, ...query }, () => {
+        if (!options.history)
+          return Promise.reject(new ApiClientError(404, "NOT_FOUND", "No history"));
+        return options.history(id, query);
+      }),
+    quarantine: (id, body, token) =>
+      respond("quarantine", { id, ...body, token }, () => {
+        checkToken(token);
+        const detail = options.details?.[id];
+        const manualQuarantine = { reason: body.reason, at: AS_OF };
+        if (detail) {
+          detail.manualQuarantine = manualQuarantine;
+          for (const scope of detail.scopes) {
+            if (scope.status === null) continue;
+            if (scope.status !== "broken") scope.status = "quarantined";
+            scope.quarantineSource = scope.quarantineSource === "auto" ? "both" : "manual";
+          }
+        }
+        return { manualQuarantine };
+      }),
+    release: (id, token) =>
+      respond("release", { id, token }, () => {
+        checkToken(token);
+        const detail = options.details?.[id];
+        if (detail) {
+          detail.manualQuarantine = null;
+          for (const scope of detail.scopes) {
+            if (scope.status === "quarantined" && scope.quarantineSource === "manual")
+              scope.status = scope.flakyCommits > 0 ? "flaky" : "stable";
+            scope.quarantineSource = scope.quarantineSource === "both" ? "auto" : null;
+          }
+        }
+        return undefined;
+      }),
   };
+
+  function checkToken(token: string | undefined) {
+    if (options.requireToken !== undefined && token !== options.requireToken) {
+      throw new ApiClientError(401, "UNAUTHORIZED", "A valid write token is required");
+    }
+  }
 
   async function respond<T>(
     method: string,

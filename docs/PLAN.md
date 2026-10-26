@@ -470,10 +470,10 @@ From T-08 onward, the remaining tasks are delivered in **12 review groups** inst
 | T-23 | Retention cleanup | `feat/retention` | TW → IM | T-07 | RET-01, RET-03 | S | Todo |
 | T-24 | ShopLite acceptance suite (API) | `test/shoplite-acceptance` | TW | T-12, T-17…T-22 | SEED-03, 05, DET-05, STA-05, QUA-05, API-02…05 | M | Todo |
 | T-25 | ShopLite discrepancy fixes (conditional) | `fix/shoplite-acceptance` | IM | T-24 | as failing | S–M | Todo |
-| T-26 | Web foundation | `feat/web-foundation` | TW → IM | T-04 | STA-04, UI-03, UI-06 | M | Tests in review |
-| T-27 | Overview cards and filter chips | `feat/overview-filters` | TW → IM | T-26 | UI-01, UI-02 | M | Tests in review |
-| T-28 | Ranked table and search | `feat/ranked-table` | TW → IM | T-26 | UI-04, UI-05 | M | Tests in review |
-| T-29 | Loading, empty, error states | `feat/ui-states` | TW → IM | T-27, T-28 | UI-08 | S | Tests in review |
+| T-26 | Web foundation | `feat/web-foundation` | TW → IM | T-04 | STA-04, UI-03, UI-06 | M | Done |
+| T-27 | Overview cards and filter chips | `feat/overview-filters` | TW → IM | T-26 | UI-01, UI-02 | M | Done |
+| T-28 | Ranked table and search | `feat/ranked-table` | TW → IM | T-26 | UI-04, UI-05 | M | Done |
+| T-29 | Loading, empty, error states | `feat/ui-states` | TW → IM | T-27, T-28 | UI-08 | S | Done |
 | T-30 | Test detail page (read-only) | `feat/detail-page` | TW → IM | T-26 | UI-07 | M | Todo |
 | T-31 | Quarantine controls | `feat/quarantine-controls` | TW → IM | T-30 | UI-07, UI-09 | S | Todo |
 | T-32 | E2E harness and overview flows | `test/e2e-overview` | Both | T-12, T-17, T-18, T-27, T-28 | NFR-02, UI-01…05 | M | Todo |

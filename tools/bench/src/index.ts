@@ -1,2 +1,2 @@
-// Performance benchmarks (REQ-NFR-01). The implementation is added in T-35 (PLAN §3.5).
-export {};
+// Performance benchmarks (REQ-NFR-01). Run with `npm run bench`.
+export { check, formatReport, percentile, type BenchResult } from "./stats.js";

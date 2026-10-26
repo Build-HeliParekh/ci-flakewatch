@@ -56,23 +56,43 @@ export interface CommitSummary {
  * on the commit are combined (REQ-DET-03); commits with only skipped results are left out.
  */
 export function summarizeCommits(scopeFacts: readonly ResultFact[]): CommitSummary[] {
-  const byCommit = new Map<string, ResultFact[]>();
+  // One pass per fact; this runs for every test case on every list request (REQ-NFR-01).
+  interface Acc {
+    firstStartedAtMs: number;
+    failed: number;
+    passed: number;
+    branches: Set<string>;
+  }
+  const byCommit = new Map<string, Acc>();
   for (const fact of scopeFacts) {
-    const group = byCommit.get(fact.commitSha);
-    if (group) group.push(fact);
-    else byCommit.set(fact.commitSha, [fact]);
+    let acc = byCommit.get(fact.commitSha);
+    if (!acc) {
+      acc = { firstStartedAtMs: fact.startedAtMs, failed: 0, passed: 0, branches: new Set() };
+      byCommit.set(fact.commitSha, acc);
+    }
+    if (fact.startedAtMs < acc.firstStartedAtMs) acc.firstStartedAtMs = fact.startedAtMs;
+    if (fact.status === "failed") acc.failed++;
+    else if (fact.status === "passed") acc.passed++;
+    acc.branches.add(fact.branch);
   }
 
   const summaries: CommitSummary[] = [];
-  for (const [commitSha, facts] of byCommit) {
-    const outcome = classifyCommit(facts.map((fact) => fact.status));
+  for (const [commitSha, acc] of byCommit) {
+    const outcome: CommitOutcome | null =
+      acc.failed > 0 && acc.passed > 0
+        ? "flaky"
+        : acc.failed > 0
+          ? "failed"
+          : acc.passed > 0
+            ? "passed"
+            : null;
     if (outcome === null) continue;
     summaries.push({
       commitSha,
-      firstStartedAtMs: Math.min(...facts.map((fact) => fact.startedAtMs)),
+      firstStartedAtMs: acc.firstStartedAtMs,
       outcome,
-      decisiveResults: facts.filter((fact) => fact.status !== "skipped").length,
-      branches: [...new Set(facts.map((fact) => fact.branch))].sort(compareCodePoints),
+      decisiveResults: acc.failed + acc.passed,
+      branches: [...acc.branches].sort(compareCodePoints),
     });
   }
 

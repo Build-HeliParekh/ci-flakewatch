@@ -478,13 +478,13 @@ From T-08 onward, the remaining tasks are delivered in **12 review groups** inst
 | T-29 | Loading, empty, error states | `feat/ui-states` | TW → IM | T-27, T-28 | UI-08 | S | Done |
 | T-30 | Test detail page (read-only) | `feat/detail-page` | TW → IM | T-26 | UI-07 | M | Done |
 | T-31 | Quarantine controls | `feat/quarantine-controls` | TW → IM | T-30 | UI-07, UI-09 | S | Done |
-| T-32 | E2E harness and overview flows | `test/e2e-overview` | Both | T-12, T-17, T-18, T-27, T-28 | NFR-02, UI-01…05 | M | Todo |
-| T-33 | E2E detail, quarantine, error flows | `test/e2e-detail` | TW (+ fix) | T-20, T-21, T-29, T-31, T-32 | UI-07, UI-08 | S | Todo |
-| T-34 | Accessibility and responsive layout | `feat/a11y` | TW → IM | T-29, T-31, T-32 | UI-09, UI-10 | M | Todo |
-| T-35 | Benchmarks | `feat/bench` | TW → IM | T-12, T-17, T-18, T-20 | NFR-01 | M | Todo |
-| T-36 | Dogfood upload step | `ci/dogfood-upload` | Both | T-03 | CI-04 | S | Todo |
-| T-37 | Agent review workflow (optional) | `ci/agent-review` | Both | T-03 | CI-06 | S | Todo |
-| T-38 | Traceability close-out and docs | `docs/v1-closeout` | IM | all others | NFR-05 (verify) | S | Todo |
+| T-32 | E2E harness and overview flows | `test/e2e-overview` | Both | T-12, T-17, T-18, T-27, T-28 | NFR-02, UI-01…05 | M | Done |
+| T-33 | E2E detail, quarantine, error flows | `test/e2e-detail` | TW (+ fix) | T-20, T-21, T-29, T-31, T-32 | UI-07, UI-08 | S | Done |
+| T-34 | Accessibility and responsive layout | `feat/a11y` | TW → IM | T-29, T-31, T-32 | UI-09, UI-10 | M | Done |
+| T-35 | Benchmarks | `feat/bench` | TW → IM | T-12, T-17, T-18, T-20 | NFR-01 | M | Done |
+| T-36 | Dogfood upload step | `ci/dogfood-upload` | Both | T-03 | CI-04 | S | Done |
+| T-37 | Agent review workflow (optional) | `ci/agent-review` | Both | T-03 | CI-06 | S | Done (checks only; workflow not added) |
+| T-38 | Traceability close-out and docs | `docs/v1-closeout` | IM | all others | NFR-05 (verify) | S | Done |
 
 ### 4.2 Task details
 

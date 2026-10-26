@@ -62,31 +62,21 @@ export function QuarantineControls({
 
   return (
     <div className="quarantine">
-      {manual ? (
-        <>
-          <p className="quarantine__note">
-            Quarantined by hand on {manual.at.slice(0, 10)}: <q>{manual.reason}</q>
-          </p>
-          <button
-            ref={trigger}
-            type="button"
-            className="button"
-            disabled={release.isPending}
-            onClick={() => release.mutate()}
-          >
-            {release.isPending ? "Releasing…" : "Release"}
-          </button>
-        </>
-      ) : (
-        <button
-          ref={trigger}
-          type="button"
-          className="button button--primary"
-          onClick={() => setDialog({ kind: "quarantine" })}
-        >
-          Quarantine
-        </button>
+      {manual && (
+        <p className="quarantine__note">
+          Quarantined by hand on {manual.at.slice(0, 10)}: <q>{manual.reason}</q>
+        </p>
       )}
+      {/* One button for both actions, so keyboard focus stays on it when the state flips. */}
+      <button
+        ref={trigger}
+        type="button"
+        className={manual ? "button" : "button button--primary"}
+        disabled={release.isPending}
+        onClick={() => (manual ? release.mutate() : setDialog({ kind: "quarantine" }))}
+      >
+        {manual ? (release.isPending ? "Releasing…" : "Release") : "Quarantine"}
+      </button>
       {!dialog && error && (
         <p className="form-error" role="alert">
           {error}

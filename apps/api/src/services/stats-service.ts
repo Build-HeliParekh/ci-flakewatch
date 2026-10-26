@@ -109,10 +109,11 @@ export function createStatsService(db: Db, rules: StatusRules): StatsService {
     lastSeenMs: number | null,
     manual: boolean,
   ): ScopeResult => {
-    const counts = computeScopeCounts(scopeFacts);
+    const commits = summarizeCommits(scopeFacts);
+    const counts = computeScopeCounts(scopeFacts, commits);
     const { status, quarantineSource } = resolveStatus({
       counts,
-      commits: summarizeCommits(scopeFacts),
+      commits,
       manual,
       rules,
     });
@@ -130,7 +131,21 @@ export function createStatsService(db: Db, rules: StatusRules): StatsService {
         startedAtOrBeforeMs: range.endInclusiveMs,
       });
       const factsByTestCase = groupBy(facts, (fact) => fact.testCaseId);
-      const lastSeen = loadLastSeen(db, params.repo === undefined ? {} : { repo: params.repo });
+      // Last seen ignores the window (PQ-12a). A listed test case has results in the window,
+      // and those are newer than anything before it, so only attempts dated after `now` can be
+      // later: load just those, instead of scanning every retained result.
+      const lastSeen = loadLastSeen(db, {
+        ...(params.repo === undefined ? {} : { repo: params.repo }),
+        startedAfterMs: range.endInclusiveMs,
+      });
+      for (const [id, scopeFacts] of factsByTestCase) {
+        const byBranch = lastSeen.get(id) ?? new Map<string, number>();
+        for (const fact of scopeFacts) {
+          if ((byBranch.get(fact.branch) ?? -Infinity) < fact.startedAtMs)
+            byBranch.set(fact.branch, fact.startedAtMs);
+        }
+        lastSeen.set(id, byBranch);
+      }
       const manual = manuallyQuarantined();
       const identities = testCasesById(params.repo);
 

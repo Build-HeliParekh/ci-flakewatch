@@ -24,6 +24,10 @@ jobs:
       - name: Check out
         uses: actions/checkout@v7
 
+      - name: Record start time
+        # startedAt for the optional flakewatch upload (REQ-CI-04, decision PQ-05).
+        run: echo "FLAKEWATCH_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
       - name: Set up Node.js 22
         uses: actions/setup-node@v7
         with:
@@ -65,3 +69,33 @@ jobs:
           path: reports/junit/
           retention-days: 30
           if-no-files-found: warn
+
+      # Optional dogfooding (REQ-CI-04). Runs only when the repository variable FLAKEWATCH_URL
+      # is set, never fails the build, and is the only step that reads a secret (REQ-CI-02).
+      - name: Upload test results to flakewatch
+        if: always() && vars.FLAKEWATCH_URL != ''
+        continue-on-error: true
+        env:
+          FLAKEWATCH_URL: ${{ vars.FLAKEWATCH_URL }}
+          FLAKEWATCH_TOKEN: ${{ secrets.FLAKEWATCH_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          if [ -z "$FLAKEWATCH_TOKEN" ]; then
+            echo "::warning::FLAKEWATCH_TOKEN is not set, so test results were not uploaded to flakewatch."
+            exit 0
+          fi
+          if [ ! -f reports/junit/junit.xml ]; then
+            echo "::warning::No JUnit report at reports/junit/junit.xml to upload to flakewatch."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            -H "Authorization: Bearer $FLAKEWATCH_TOKEN" \
+            -F "report=@reports/junit/junit.xml" \
+            -F "repo=$REPO" -F "branch=$BRANCH" -F "commitSha=$COMMIT_SHA" \
+            -F "runId=$RUN_ID" -F "attempt=$RUN_ATTEMPT" -F "startedAt=$FLAKEWATCH_STARTED_AT" \
+            "$FLAKEWATCH_URL/api/v1/results" \
+            || echo "::warning::Uploading test results to flakewatch failed; the build is not affected."

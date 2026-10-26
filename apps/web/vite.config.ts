@@ -7,9 +7,12 @@ const apiTarget = process.env["FLAKEWATCH_API_PROXY"] ?? "http://localhost:4000"
 
 export default defineConfig({
   plugins: [react()],
+  // VITE_API_URL comes from the repo's root .env, next to the API's settings.
+  envDir: "../..",
   server: {
     port: 5173,
     proxy: { "/api": { target: apiTarget, changeOrigin: false } },
   },
-  preview: { port: 4173 },
+  // The preview server forwards /api the same way, for end-to-end tests (PQ-20).
+  preview: { port: 4173, proxy: { "/api": { target: apiTarget, changeOrigin: false } } },
 });

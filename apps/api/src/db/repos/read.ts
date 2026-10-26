@@ -59,6 +59,9 @@ const FROM_RESULTS = `
 
 /** Every stored result matching `filter`, as facts, ordered by attempt start, then result id. */
 export function loadFacts(db: Db, filter: FactFilter): ResultFact[] {
+  // For many test cases at once (the ranked list), load the attempts first and then only small
+  // columns per result: much faster than one wide join (REQ-NFR-01).
+  if (filter.testCaseIds === undefined) return loadFactsByAttempt(db, filter);
   const where = whereClause(filter);
   return db
     .prepare<unknown[], ResultFact>(
@@ -72,13 +75,39 @@ export function loadFacts(db: Db, filter: FactFilter): ResultFact[] {
     .all(...where.params);
 }
 
+function loadFactsByAttempt(db: Db, filter: FactFilter): ResultFact[] {
+  const where = whereClause(filter);
+  const attempts = db
+    .prepare<unknown[], [number, number, number, string, string, string]>(
+      `SELECT a.id, a.attempt, a.started_at_ms, r.commit_sha, r.branch, r.repo
+       FROM attempts a JOIN runs r ON r.id = a.run_pk
+       ${where.sql}
+       ORDER BY a.started_at_ms, a.id`,
+    )
+    .raw(true)
+    .all(...where.params);
+  const results = db
+    .prepare<[number], [number, ResultFact["status"]]>(
+      "SELECT test_case_id, status FROM results WHERE attempt_pk = ? ORDER BY id",
+    )
+    .raw(true);
+
+  const facts: ResultFact[] = [];
+  for (const [attemptId, attempt, startedAtMs, commitSha, branch, repo] of attempts) {
+    for (const [testCaseId, status] of results.all(attemptId)) {
+      facts.push({ testCaseId, repo, commitSha, branch, attemptId, attempt, startedAtMs, status });
+    }
+  }
+  return facts;
+}
+
 /**
  * For each test case, the latest attempt `startedAt` per branch (any result status, ignoring
  * any window). Keys of the inner map are branch names; `*` is not included.
  */
 export function loadLastSeen(
   db: Db,
-  filter: { repo?: string; testCaseIds?: readonly number[] },
+  filter: { repo?: string; testCaseIds?: readonly number[]; startedAfterMs?: number },
 ): Map<number, Map<string, number>> {
   const where = whereClause(filter);
   const rows = db

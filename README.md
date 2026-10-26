@@ -6,7 +6,7 @@
 
 Detect, rank, and quarantine flaky tests from CI results. Flakewatch ingests JUnit XML, flags tests that fail then pass on the same commit, ranks them by flake rate, and shows trends in a filterable dashboard backed by a REST API.
 
-![status](https://img.shields.io/badge/status-in%20development-orange)
+![status](https://img.shields.io/badge/status-v1%20complete-brightgreen)
 ![spec](https://img.shields.io/badge/spec-v1.1-blueviolet)
 ![stack](https://img.shields.io/badge/stack-React%20%2B%20Node%20%2B%20TypeScript-blue)
 ![format](https://img.shields.io/badge/input-JUnit%20XML-informational)
@@ -101,8 +101,8 @@ cd ci-flakewatch
 npm install
 cp .env.example .env
 
-npm run db:migrate    # create the SQLite schema
-npm run dev           # API on :4000, dashboard on :5173
+npm run db:migrate    # create the SQLite schema (the server also does this on start)
+npm run dev           # API on :4000, dashboard on :5173 (reads .env)
 npm run seed:demo     # in a second terminal: load ShopLite data ending today
 ```
 
@@ -448,29 +448,36 @@ ci-flakewatch/
 ├── apps/
 │   ├── api/                  # Express REST API
 │   │   ├── src/
-│   │   │   ├── routes/       # results, tests, summary, quarantine, repos, health
-│   │   │   ├── ingest/       # parser adapters (JUnit first)
-│   │   │   ├── detector/     # flake rule, statuses, stats
-│   │   │   ├── db/           # schema, migrations, repositories
+│   │   │   ├── http/         # app, auth, validation, routes (results, read, quarantine, health)
+│   │   │   ├── ingest/       # JUnit parser, metadata checks, ingest service
+│   │   │   ├── domain/       # flake rule, statuses, stats, trend, ranking (pure functions)
+│   │   │   ├── services/     # stats service: one "now" per request
+│   │   │   ├── db/           # schema, migrations, queries
+│   │   │   ├── cli/          # migrate, reset, retention
 │   │   │   ├── clock.ts      # single source of "now" (FLAKEWATCH_NOW)
+│   │   │   ├── retention.ts
 │   │   │   └── server.ts
-│   │   └── test/
+│   │   └── test/             # unit, integration, and the ShopLite acceptance suite
 │   └── web/                  # React dashboard
 │       ├── src/
-│       │   ├── pages/        # Overview, TestDetail
-│       │   ├── components/   # FilterChips, RankedTable, TrendChart
+│       │   ├── pages/        # Overview, Detail
+│       │   ├── components/   # FilterChips, RankedTable, TrendChart, CommitStrip, QuarantineControls…
+│       │   ├── state/        # URL state, in-memory write token
 │       │   └── api/          # typed API client
 │       └── test/
 ├── packages/
 │   └── shared/               # shared types: API contracts, statuses
 ├── tools/
-│   └── seed/                 # ShopLite synthetic data generator
+│   ├── seed/                 # ShopLite synthetic data generator
+│   ├── bench/                # npm run bench
+│   └── spec-check/           # requirement traceability
 ├── docs/
 │   ├── SPEC.md               # requirements with IDs + acceptance criteria
 │   ├── RETRO.md              # spec gaps and agent mistakes, for the retrospective
 │   └── PRESENTATION-QA.md    # likely questions and answers for demos
 ├── e2e/                      # Playwright tests
 ├── .github/
+│   ├── workflows/ci.yml
 │   └── pull_request_template.md
 ├── AGENTS.md                 # standing rules for AI agents and contributors
 ├── CLAUDE.md                 # points Claude Code to AGENTS.md
@@ -499,7 +506,7 @@ Set these in `.env`. The defaults are shown.
 
 ## 📤 Uploading results from CI
 
-Any CI system that can produce JUnit XML and run `curl` can send results. Here's an example GitHub Actions step:
+Any CI system that can produce JUnit XML and run `curl` can send results. This repository's own [`ci.yml`](.github/workflows/ci.yml) has a ready-made step that runs only when the repository variable `FLAKEWATCH_URL` is set, and never fails the build. A minimal GitHub Actions step looks like this:
 
 ```yaml
 - name: Upload test results to flakewatch
@@ -507,7 +514,7 @@ Any CI system that can produce JUnit XML and run `curl` can send results. Here's
   run: |
     curl -fsS -X POST "$FLAKEWATCH_URL/api/v1/results" \
       -H "Authorization: Bearer $FLAKEWATCH_TOKEN" \
-      -F report=@reports/junit.xml \
+      -F report=@reports/junit/junit.xml \
       -F repo="${{ github.repository }}" \
       -F branch="${{ github.head_ref || github.ref_name }}" \
       -F commitSha="${{ github.sha }}" \
@@ -548,7 +555,9 @@ it("REQ-DET-01: marks fail-then-pass on the same commit as flaky", () => { /* ..
 
 `npm run spec:check` fails if any requirement has no test, or a test names an ID that doesn't exist.
 
-> 🔁 **Dogfooding:** flakewatch's own CI uploads its test results to flakewatch, so the project watches its own tests for flakiness.
+> 🔁 **Dogfooding:** once a hosted flakewatch exists, set the repository variable `FLAKEWATCH_URL` and the secret `FLAKEWATCH_TOKEN`, and this repo's CI uploads its own test results to it, so the project watches its own tests for flakiness.
+
+Before a release, `npm run spec:check -- --strict` must pass: every requirement covered by a real test, none pending. `npm run bench` checks the performance targets against the seeded ShopLite data.
 
 ## 🧭 Development workflow
 
@@ -560,16 +569,16 @@ it("REQ-DET-01: marks fail-then-pass on the same commit as flaky", () => { /* ..
 
 ## 🗺️ Roadmap
 
-- [x] `docs/SPEC.md` with requirement IDs and acceptance criteria (v1.1)
-- [ ] ShopLite synthetic data generator with planted behaviors
-- [ ] JUnit XML parser adapter and ingestion endpoint
-- [ ] Flake detector and statuses
-- [ ] Query API: ranking, summary, history, quarantine list
-- [ ] Dashboard: overview, filter chips, ranked table
-- [ ] Dashboard: test detail page with trend
-- [ ] Retention job
-- [ ] GitHub Actions CI for this repo: lint, build, tests, spec check, end-to-end, test-report artifacts, and optional upload of its own results (SPEC §13.3)
-- [ ] Optional agent review of pull requests (REQ-CI-06)
+- [x] `docs/SPEC.md` with requirement IDs and acceptance criteria
+- [x] ShopLite synthetic data generator with planted behaviors
+- [x] JUnit XML parser and ingestion endpoint
+- [x] Flake detector and statuses
+- [x] Query API: ranking, summary, history, quarantine list
+- [x] Dashboard: overview, filter chips, ranked table
+- [x] Dashboard: test detail page with trend and quarantine controls
+- [x] Retention job
+- [x] GitHub Actions CI for this repo: lint, build, tests, spec check, end-to-end, test-report artifacts, and optional upload of its own results (SPEC §13.3)
+- [x] Checks for an optional agent review workflow (REQ-CI-06); adding the workflow itself is the owner's choice
 - [ ] Quarantine hysteresis (planned change PC-01)
 - [ ] Additional adapters: TRX, xUnit XML, NUnit XML, CTRF
 - [ ] Agent implements issues labelled `agent` (planned change PC-02)

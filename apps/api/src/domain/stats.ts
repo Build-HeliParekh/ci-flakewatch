@@ -1,7 +1,7 @@
 // Per-scope metrics (REQ-STA-02, REQ-STA-07). Facts are for a single test case, already
 // narrowed to one scope with `selectScopeFacts`.
 import { ALL_BRANCHES, type BranchScope } from "@flakewatch/shared";
-import { summarizeCommits } from "./detector.js";
+import { summarizeCommits, type CommitSummary } from "./detector.js";
 import type { ResultFact } from "./types.js";
 
 export interface ScopeCounts {
@@ -19,8 +19,11 @@ export interface ScopeCounts {
   skippedResults: number;
 }
 
-export function computeScopeCounts(scopeFacts: readonly ResultFact[]): ScopeCounts {
-  const commits = summarizeCommits(scopeFacts);
+/** `commits` may be passed when already computed with `summarizeCommits(scopeFacts)`. */
+export function computeScopeCounts(
+  scopeFacts: readonly ResultFact[],
+  commits: readonly CommitSummary[] = summarizeCommits(scopeFacts),
+): ScopeCounts {
   const flakyCommits = commits.filter((commit) => commit.outcome === "flaky").length;
   const failedAttemptIds = new Set<number>();
   let skippedResults = 0;

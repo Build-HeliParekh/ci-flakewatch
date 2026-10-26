@@ -31,7 +31,7 @@ Standing instructions for **every AI coding agent** (and human contributor) work
 
 ## 3. Workflow for a task
 
-Tasks come from `docs/PLAN.md`. Most are a **pair**: a test writer stage (`T-nna`) and an implementer stage (`T-nnb`) that share **one branch and one pull request** (PLAN §2.2).
+Tasks come from `docs/PLAN.md`. Most are a **pair**: a test writer stage (`T-nna`) and an implementer stage (`T-nnb`) that share **one branch and one pull request** (PLAN §2.2). From T-08 onward, tasks are delivered in **review groups** (PLAN §4.0): one branch and one pull request per group, with the tests for every task in the group written and approved before any of its code.
 
 1. **Read** this file, the task in `docs/PLAN.md`, and every requirement ID it lists.
 2. **Test writer:** create the branch from the latest `main` (naming in [§7](#7-git-and-pull-requests)). Write the failing tests first. Every test covering a requirement starts its name with the ID:

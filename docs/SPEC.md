@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Spec version** | 1.4 |
+| **Spec version** | 1.5 |
 | **Status** | Approved. Takes effect when merged to `main` |
 | **Owner** | Heli Parekh |
 | **Last updated** | 2026-10-25 |
@@ -457,7 +457,7 @@ The API also reports `manualQuarantine: { reason, at } | null`.
 ## 9. API (API)
 
 #### REQ-API-01
-**General.** All endpoints are under `/api/v1` and return JSON with `Content-Type: application/json`, except `204` responses. Any query parameter outside its documented rules MUST return `400` with `VALIDATION_ERROR`. Errors MUST use:
+**General.** All endpoints are under `/api/v1` and return JSON with `Content-Type: application/json`, except `204` responses. Errors MUST use:
 
 ```json
 { "error": { "code": "VALIDATION_ERROR", "message": "attempt must be an integer ≥ 1" } }
@@ -476,6 +476,18 @@ The API also reports `manualQuarantine: { reason, at } | null`.
 *Acceptance:*
 - Given `GET /api/v1/tests/999999` for an unknown ID, then the response is `404` with `NOT_FOUND` in the format above.
 - Given `GET /api/v1/tests?window=14d`, then the response is `400` with `VALIDATION_ERROR`.
+
+**Query parameters.** A documented parameter whose value is outside its rules, given more than once, or given with an empty value MUST return `400` with `VALIDATION_ERROR`. Parameter names that an endpoint doesn't document are ignored. See decision [D-18](#151-decision-log).
+
+*Acceptance:*
+- Given `GET /api/v1/tests?window=7d&window=30d`, then the response is `400`.
+- Given `GET /api/v1/tests?q=`, then the response is `400`.
+- Given `GET /api/v1/tests?foo=1`, then the response is the same as `GET /api/v1/tests`.
+
+**Timestamps.** Every date-time in a response (for example `asOf`, `lastSeenAt`, `startedAt`, `firstStartedAt`, `at`) MUST be ISO 8601 UTC with second precision and a `Z` suffix, such as `2026-10-24T00:00:00Z`. Fractional seconds are truncated. See decision [D-17](#151-decision-log).
+
+*Acceptance:*
+- Given an attempt uploaded with `startedAt=2026-10-23T09:00:00.789+02:00`, then responses show it as `2026-10-23T07:00:00Z`.
 
 #### REQ-API-02
 **List repos.** `GET /api/v1/repos` MUST return every repo with its branches, both sorted by code point:
@@ -568,10 +580,20 @@ The response also includes `page`, `pageSize`, `total`, and `asOf` (the `now` us
 - Given a single attempt containing two `failed` results for the test case (an in-run retry), then `rerun` is `true`.
 
 #### REQ-API-07
-**Health.** `GET /api/v1/health` MUST return `200` with `{ "status": "ok" }` when the database is reachable, and `503` otherwise.
+**Health.** `GET /api/v1/health` MUST return `200` with `{ "status": "ok" }` when the database is reachable, and `503` with `{ "status": "unavailable" }` otherwise (decision [D-19](#151-decision-log)).
 
 *Acceptance:*
-- Given the server is running with a valid database, then the response is `200`.
+- Given the server is running with a valid database, then the response is `200` with `{ "status": "ok" }`.
+- Given the database can't be queried, then the response is `503` with `{ "status": "unavailable" }`.
+
+#### REQ-API-08
+**Cross-origin access.** The API MUST answer requests whose `Origin` is listed in `CORS_ORIGINS` with `Access-Control-Allow-Origin` set to that origin, and MUST answer `OPTIONS` preflight requests from those origins with `204`, allowing the methods `GET`, `POST`, and `DELETE` and the headers `Authorization` and `Content-Type`. Requests from other origins get no CORS headers. When `CORS_ORIGINS` is empty, no cross-origin access is allowed. In development, the dashboard reaches the API through the Vite dev server's proxy (same origin), so it needs no CORS. See decision [D-20](#151-decision-log).
+
+*Acceptance:*
+- Given `CORS_ORIGINS=http://localhost:4173` and a `GET /api/v1/health` with `Origin: http://localhost:4173`, then the response has `Access-Control-Allow-Origin: http://localhost:4173`.
+- Given the same setting and `Origin: https://evil.example`, then the response has no `Access-Control-Allow-Origin` header.
+- Given the same setting and an `OPTIONS /api/v1/results` preflight from `http://localhost:4173` asking for `Authorization`, then the response is `204` and allows `POST` and `Authorization`.
+- Given `CORS_ORIGINS` is empty, then no response has CORS headers.
 
 ---
 
@@ -828,8 +850,9 @@ With default options this gives exactly **384** commits: **44** in `7d` and **19
 | `RETENTION_DAYS` | `90` | Integer ≥ 37 ([REQ-RET-02](#req-ret-02)) |
 | `MAX_UPLOAD_MB` | `10` | Number > 0 (1 MB = 1,048,576 bytes) |
 | `UPLOAD_TOKEN` | *(unset)* | Optional write token ([REQ-ING-10](#req-ing-10)) |
+| `CORS_ORIGINS` | *(empty)* | Comma-separated origins allowed cross-origin access, each `http(s)://host[:port]` with no path ([REQ-API-08](#req-api-08)) |
 | `FLAKEWATCH_NOW` | *(unset)* | Optional ISO date-time ([REQ-NFR-04](#req-nfr-04)) |
-| `VITE_API_URL` | `http://localhost:4000` | Dashboard's API base URL |
+| `VITE_API_URL` | *(empty)* | Dashboard's API base URL. Empty means same origin: in development the Vite proxy forwards `/api` to `http://localhost:4000` |
 
 An invalid value MUST stop the server from starting, with an error naming the variable ([REQ-NFR-06](#req-nfr-06)).
 
@@ -932,6 +955,10 @@ Questions raised while writing and reviewing the spec, and how they were settled
 | D-14 | How can the traceability check pass while v1 is still being built? | **Placeholder tests count as *pending*.** The normal check passes with pending IDs, and a `--strict` mode fails on them; v1 needs the strict check to pass ([REQ-NFR-05](#req-nfr-05)) | Otherwise CI, which runs the check on every PR ([REQ-CI-01](#req-ci-01)), would stay red until the very last test exists. Pending IDs stay visible, and the strict check keeps the goal of full coverage. | Leave the check out of CI until the end; add all tests as todos on day one | 2026-10-25 |
 | D-15 | Which Node.js version does flakewatch target? | **Node.js 22** in CI ([REQ-CI-01](#req-ci-01)) and as the minimum for local development | Node 20 reached end of life in April 2026, and the patched test tooling (Vitest 5) needs Node 22 or later. Node 22 is a long-term-support release with security fixes until April 2027, and matches the owner's machine. | Node 24 (longer support, but a local upgrade); stay on Node 20 (unsupported, and blocks security fixes) | 2026-10-25 |
 | D-16 | How is configuration validated, and what if `FLAKEWATCH_NOW` becomes invalid while running? | **A traceable requirement, REQ-NFR-06:** every §13.2 variable is checked at startup and an invalid one stops the server; an invalid `FLAKEWATCH_NOW` at runtime fails the request with 500 | §13.2 already said invalid values stop the server, but only `RETENTION_DAYS` had a requirement ID, so the other checks couldn't be traced to tests. Failing loudly on a bad clock value is safer than silently using the real time. | Leave §13.2 untraced; fall back to the system time when `FLAKEWATCH_NOW` is invalid | 2026-10-25 |
+| D-17 | What format do timestamps have in responses? | **ISO 8601 UTC to the second, with `Z`** ([REQ-API-01](#req-api-01)) | Matches every example in this spec, and CI timing doesn't need milliseconds. One fixed format keeps API tests and the dashboard simple. | Millisecond precision (`.000Z`) | 2026-10-25 |
+| D-18 | What happens with unknown, repeated, or empty query parameters? | **Unknown names are ignored; repeated or empty documented parameters are `400`** ([REQ-API-01](#req-api-01)) | Ignoring unknown names tolerates tools that add their own parameters (for example cache-busters). A repeated or empty value is ambiguous, so it's rejected rather than guessed. | Reject unknown names too | 2026-10-25 |
+| D-19 | What does `/health` return when the database is unreachable? | **`503` with `{ "status": "unavailable" }`** ([REQ-API-07](#req-api-07)) | The same shape as the healthy response, so a monitor reads one field. | The standard error body | 2026-10-25 |
+| D-20 | How does the dashboard reach the API on another port? | **A Vite proxy in development, plus CORS for origins listed in `CORS_ORIGINS`** ([REQ-API-08](#req-api-08)) | The proxy needs no CORS for local work. An explicit allow-list keeps deployed setups (such as e2e with `vite preview`) working without opening the API to every website. | Allow all origins; serve the dashboard from the API | 2026-10-25 |
 
 **Open questions:**
 
@@ -976,3 +1003,4 @@ Changes already agreed for a later version. Each one becomes a spec pull request
 | 1.2 | 2026-10-25 | REQ-NFR-05: placeholder tests (`it.todo`) count as pending, and `--strict` fails on pending (decision D-14). Raised by the planner (PQ-01). |
 | 1.3 | 2026-10-25 | REQ-CI-01: CI runs on Node.js 22 instead of 20 (decision D-15). Found while scaffolding: Node 20 is end-of-life and blocks patched dependencies. |
 | 1.4 | 2026-10-25 | Added REQ-NFR-06 (configuration validation) and decision D-16. Raised by the planner as PQ-11. |
+| 1.5 | 2026-10-25 | REQ-API-01: query parameter rules and second-precision timestamps (D-17, D-18). REQ-API-07: 503 body (D-19). New REQ-API-08 cross-origin access with `CORS_ORIGINS`; `VITE_API_URL` defaults to same origin (D-20). Raised by the planner as PQ-04, PQ-06, PQ-15, and PQ-16. |

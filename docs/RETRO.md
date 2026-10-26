@@ -27,6 +27,16 @@ Copy this block to the **top** of the log, so the newest entry comes first:
 
 ## Log
 
+### R-11: The XML library's validator accepts a bare "&"
+- **Date:** 2026-10-26
+- **Found by:** test writer (T-08), running the tests against a throwaway implementation
+- **Stage:** tests
+- **Requirement(s):** REQ-ING-08
+- **What happened:** A test fed the parser `name="x & y"`, which isn't well-formed XML. fast-xml-parser's `XMLValidator` accepted it, so a parser relying only on the library would have stored a report the spec says to reject. The same run also showed four questions the spec left open: how positions are counted in nested suites, what an empty failure message stores, which durations are "invalid", and whether a blank name is "empty".
+- **Root cause:** The plan named a library and assumed "validate" means "well-formed". The spec's "missing or invalid" and "missing or empty" left edge cases to the reader.
+- **Fix:** The parser also rejects a bare `&` outside CDATA and comments. The questions became PQ-19, PQ-12d, and PQ-23, decided by the owner before the tests were approved.
+- **Lesson:** Test a library against the spec's rules, not its own description. Words like "invalid" and "empty" need a list of what they include.
+
 ### R-10: Tools installed from the wrong operating system broke the owner's setup
 - **Date:** 2026-10-25
 - **Found by:** human, when `npm run dev` failed on their Mac

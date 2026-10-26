@@ -109,3 +109,66 @@ export function loadBranchesWithResults(db: Db, testCaseId: number): string[] {
     .map((row) => row.branch)
     .sort(compareCodePoints);
 }
+
+/** The `limit` most recent failure messages for a test case, newest first (REQ-API-05, PQ-12d). */
+export function loadRecentErrors(
+  db: Db,
+  testCaseId: number,
+  limit: number,
+): { commitSha: string; branch: string; attempt: number; startedAtMs: number; message: string }[] {
+  return db
+    .prepare<
+      [number, number],
+      { commitSha: string; branch: string; attempt: number; startedAtMs: number; message: string }
+    >(
+      `SELECT r.commit_sha AS commitSha, r.branch AS branch, a.attempt AS attempt,
+              a.started_at_ms AS startedAtMs, res.message AS message
+       ${FROM_RESULTS}
+       WHERE res.test_case_id = ? AND res.status = 'failed' AND res.message IS NOT NULL
+       ORDER BY a.started_at_ms DESC, a.id DESC, res.position ASC
+       LIMIT ?`,
+    )
+    .all(testCaseId, limit);
+}
+
+export interface HistoryRow {
+  commitSha: string;
+  branch: string;
+  attemptId: number;
+  attempt: number;
+  startedAtMs: number;
+  status: "passed" | "failed" | "skipped";
+  durationMs: number;
+  position: number;
+}
+
+/** Every result of a test case on a branch (or all for `*`), oldest first (REQ-API-06). */
+export function loadHistoryRows(db: Db, testCaseId: number, branch: BranchScope): HistoryRow[] {
+  const where = whereClause({ testCaseIds: [testCaseId], branch });
+  return db
+    .prepare<unknown[], HistoryRow>(
+      `SELECT r.commit_sha AS commitSha, r.branch AS branch, a.id AS attemptId,
+              a.attempt AS attempt, a.started_at_ms AS startedAtMs, res.status AS status,
+              res.duration_ms AS durationMs, res.position AS position
+       ${FROM_RESULTS}
+       ${where.sql}
+       ORDER BY a.started_at_ms, a.id, res.position`,
+    )
+    .all(...where.params);
+}
+
+/** Every repo with the branches of its retained runs, both in code-point order (REQ-API-02). */
+export function loadRepos(db: Db): { name: string; branches: string[] }[] {
+  const rows = db
+    .prepare<[], { repo: string; branch: string }>("SELECT DISTINCT repo, branch FROM runs")
+    .all();
+  const byRepo = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const branches = byRepo.get(row.repo) ?? new Set<string>();
+    branches.add(row.branch);
+    byRepo.set(row.repo, branches);
+  }
+  return [...byRepo.keys()]
+    .sort(compareCodePoints)
+    .map((name) => ({ name, branches: [...(byRepo.get(name) ?? [])].sort(compareCodePoints) }));
+}

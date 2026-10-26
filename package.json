@@ -28,6 +28,9 @@
     "spec:check": "tsx tools/spec-check/src/cli.ts",
     "db:migrate": "npm run db:migrate -w apps/api",
     "db:reset": "npm run db:reset -w apps/api",
+    "retention": "npm run retention -w apps/api",
+    "seed": "tsx tools/seed/src/cli.ts",
+    "seed:demo": "tsx tools/seed/src/cli.ts --end today",
     "pretest": "npm run build -w packages/shared",
     "predev": "npm run build -w packages/shared"
   },

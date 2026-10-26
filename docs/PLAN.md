@@ -470,10 +470,10 @@ From T-08 onward, the remaining tasks are delivered in **12 review groups** inst
 | T-23 | Retention cleanup | `feat/retention` | TW → IM | T-07 | RET-01, RET-03 | S | Todo |
 | T-24 | ShopLite acceptance suite (API) | `test/shoplite-acceptance` | TW | T-12, T-17…T-22 | SEED-03, 05, DET-05, STA-05, QUA-05, API-02…05 | M | Todo |
 | T-25 | ShopLite discrepancy fixes (conditional) | `fix/shoplite-acceptance` | IM | T-24 | as failing | S–M | Todo |
-| T-26 | Web foundation | `feat/web-foundation` | TW → IM | T-04 | STA-04, UI-03, UI-06 | M | Todo |
-| T-27 | Overview cards and filter chips | `feat/overview-filters` | TW → IM | T-26 | UI-01, UI-02 | M | Todo |
-| T-28 | Ranked table and search | `feat/ranked-table` | TW → IM | T-26 | UI-04, UI-05 | M | Todo |
-| T-29 | Loading, empty, error states | `feat/ui-states` | TW → IM | T-27, T-28 | UI-08 | S | Todo |
+| T-26 | Web foundation | `feat/web-foundation` | TW → IM | T-04 | STA-04, UI-03, UI-06 | M | Done |
+| T-27 | Overview cards and filter chips | `feat/overview-filters` | TW → IM | T-26 | UI-01, UI-02 | M | Done |
+| T-28 | Ranked table and search | `feat/ranked-table` | TW → IM | T-26 | UI-04, UI-05 | M | Done |
+| T-29 | Loading, empty, error states | `feat/ui-states` | TW → IM | T-27, T-28 | UI-08 | S | Done |
 | T-30 | Test detail page (read-only) | `feat/detail-page` | TW → IM | T-26 | UI-07 | M | Todo |
 | T-31 | Quarantine controls | `feat/quarantine-controls` | TW → IM | T-30 | UI-07, UI-09 | S | Todo |
 | T-32 | E2E harness and overview flows | `test/e2e-overview` | Both | T-12, T-17, T-18, T-27, T-28 | NFR-02, UI-01…05 | M | Todo |
@@ -899,8 +899,8 @@ These are points where the spec is silent or ambiguous **for planning purposes**
 | PQ-14 | **Upload field parsing.** Is `attempt` accepted as `"01"`, `"1.0"`, `" 1"`? Which ISO 8601 forms count as "date-time with time zone" (e.g. `+0000` without colon, no seconds)? Unknown extra multipart fields, or two `report` files? | REQ-ING-01 | T-10 |
 | PQ-15 | ✅ *Decided 2026-10-25: unknown parameter names are ignored; repeated or empty documented parameters are 400 (SPEC v1.5 REQ-API-01, D-18).* **Unknown or repeated query parameters.** REQ-API-01: "any query parameter outside its documented rules" → 400. Does that include undocumented parameter names (`?foo=1`) and repeated ones (`?window=7d&window=30d`)? Is `q=` (empty) a 400? | REQ-API-01, API-03 | T-07, T-18 |
 | PQ-16 | ✅ *Decided 2026-10-25: 503 with `{ "status": "unavailable" }` (SPEC v1.5 REQ-API-07, D-19).* **Health `503` body.** Error format with which code (`INTERNAL_ERROR` is 500 in the table), or `{ "status": … }`? | REQ-API-07 | T-07 |
-| PQ-17 | **Dashboard pagination and sorting UI.** Page size used by the dashboard, pagination controls, whether "rank" continues across pages, how a sortable header toggles `order`, and whether sorting by `name` is offered. | REQ-UI-03, UI-04 | T-28 |
-| PQ-18 | **Detail page and labels.** What does the detail page show when the selected scope has `status: null`? Does the commit strip show all (up to 100) commits? Is the marker for one failure "1 unconfirmed failure" (the spec writes "N unconfirmed failure(s)")? | REQ-UI-04, UI-07 | T-28, T-30 |
+| PQ-17 | ✅ *Decided 2026-10-26: the dashboard shows 25 rows a page with Previous and Next buttons; rank continues across pages (page 2 starts at 26); clicking Flake rate or Failed attempts sorts worst first and a second click reverses it; no name sort is offered. T-28 covers it.* **Dashboard pagination and sorting UI.** Page size used by the dashboard, pagination controls, whether "rank" continues across pages, how a sortable header toggles `order`, and whether sorting by `name` is offered. | REQ-UI-03, UI-04 | T-28 |
+| PQ-18 | (label part) ✅ *Decided 2026-10-26: "1 unconfirmed failure" for one, "N unconfirmed failures" otherwise. T-28 covers it. The detail-page parts are still open, for T-30.* **Detail page and labels.** What does the detail page show when the selected scope has `status: null`? Does the commit strip show all (up to 100) commits? Is the marker for one failure "1 unconfirmed failure" (the spec writes "N unconfirmed failure(s)")? | REQ-UI-04, UI-07 | T-28, T-30 |
 | PQ-19 | **Position numbering in REQ-ING-04.** With nested suites, is the 1-based position of the offending `<testcase>` counted in document order across the whole report? | REQ-ING-04 | T-08 |
 | PQ-20 | **E2E vs REQ-CI-02.** `npm run test:e2e` needs a flakewatch server. The plan assumes Playwright starts its own local instance inside the job, which REQ-CI-02's "no running flakewatch server" doesn't forbid. Confirm. | REQ-CI-02, NFR-02 | T-32 |
 | PQ-21 | ✅ **Dependencies beyond the fixed stack** **Decided 2026-10-25:** all listed packages are approved: `multer` or `busboy`, `tsx`, `yaml`, `concurrently`, `jsdom`, `@testing-library/user-event`, `axe-core`, `@axe-core/playwright`, and the ESLint/Prettier packages. Anything else still needs a reason in its PR (AGENTS.md §6). | — | — |

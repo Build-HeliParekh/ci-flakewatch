@@ -431,7 +431,7 @@ Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2
 | T-12 | Seed output, manifest, CLI | `feat/seed-cli` | TW → IM | T-08, T-10, T-11 | SEED-01, 02, 06 | M | Todo |
 | T-13 | Detector and window statistics | `feat/detector` | TW → IM | T-04 | DET-01…06, STA-01, 02, 07 | M | Done |
 | T-14 | Statuses, scopes, quarantine rules | `feat/statuses` | TW → IM | T-13 | CLS-01…05, QUA-03, 04, STA-03 | M | Done |
-| T-15 | Trend series | `feat/trend` | TW → IM | T-13 | STA-05 | S | Todo |
+| T-15 | Trend series | `feat/trend` | TW → IM | T-13 | STA-05 | S | Done |
 | T-16 | Stats read service | `feat/stats-service` | TW → IM | T-06, T-14 | STA-03, STA-06 | M | Todo |
 | T-17 | `GET /repos`, `GET /summary` | `feat/repos-summary` | TW → IM | T-07, T-16 | API-02, API-04 | M | Todo |
 | T-18 | `GET /tests` ranked list | `feat/tests-list` | TW → IM | T-07, T-10, T-16 | API-01, 03, CLS-05, STA-06, NFR-04, ING-10, ING-11 | M | Todo |

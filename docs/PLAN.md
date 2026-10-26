@@ -432,7 +432,7 @@ Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2
 | T-13 | Detector and window statistics | `feat/detector` | TW → IM | T-04 | DET-01…06, STA-01, 02, 07 | M | Done |
 | T-14 | Statuses, scopes, quarantine rules | `feat/statuses` | TW → IM | T-13 | CLS-01…05, QUA-03, 04, STA-03 | M | Done |
 | T-15 | Trend series | `feat/trend` | TW → IM | T-13 | STA-05 | S | Done |
-| T-16 | Stats read service | `feat/stats-service` | TW → IM | T-06, T-14 | STA-03, STA-06 | M | Tests in review |
+| T-16 | Stats read service | `feat/stats-service` | TW → IM | T-06, T-14 | STA-03, STA-06 | M | Done |
 | T-17 | `GET /repos`, `GET /summary` | `feat/repos-summary` | TW → IM | T-07, T-16 | API-02, API-04 | M | Todo |
 | T-18 | `GET /tests` ranked list | `feat/tests-list` | TW → IM | T-07, T-10, T-16 | API-01, 03, CLS-05, STA-06, NFR-04, ING-10, ING-11 | M | Todo |
 | T-19 | `GET /tests/:id` detail | `feat/test-detail` | TW → IM | T-07, T-16 | API-01, API-05, STA-03, QUA-03 | M | Todo |

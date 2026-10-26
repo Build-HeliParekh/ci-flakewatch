@@ -22,8 +22,9 @@ export interface ApiClient {
   summary(query: SummaryQuery): Promise<SummaryResponse>;
   test(id: number): Promise<TestDetailResponse>;
   history(id: number, query: HistoryQuery): Promise<HistoryResponse>;
-  quarantine(id: number, body: QuarantineRequest): Promise<QuarantineResponse>;
-  release(id: number): Promise<void>;
+  /** `token` is the write token, when the API needs one (REQ-ING-10, decision PQ-03). */
+  quarantine(id: number, body: QuarantineRequest, token?: string): Promise<QuarantineResponse>;
+  release(id: number, token?: string): Promise<void>;
 }
 
 /** A failed API call. `status` is `null` when the API couldn't be reached at all. */
@@ -81,12 +82,12 @@ export function createHttpClient(baseUrl: string, fetchImpl: typeof fetch = fetc
     return body as T;
   }
 
-  const json = (method: string, body?: unknown): RequestInit => ({
-    method,
-    ...(body === undefined
-      ? {}
-      : { body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }),
-  });
+  const json = (method: string, body?: unknown, token?: string): RequestInit => {
+    const headers: Record<string, string> = {};
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return { method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }) };
+  };
 
   return {
     repos: () => call("/repos"),
@@ -111,8 +112,8 @@ export function createHttpClient(baseUrl: string, fetchImpl: typeof fetch = fetc
     test: (id) => call(`/tests/${id}`),
     history: (id, query) =>
       call(`/tests/${id}/history${toQueryString({ branch: query.branch, window: query.window })}`),
-    quarantine: (id, body) => call(`/tests/${id}/quarantine`, json("POST", body)),
-    release: (id) => call(`/tests/${id}/quarantine`, json("DELETE")),
+    quarantine: (id, body, token) => call(`/tests/${id}/quarantine`, json("POST", body, token)),
+    release: (id, token) => call(`/tests/${id}/quarantine`, json("DELETE", undefined, token)),
   };
 }
 

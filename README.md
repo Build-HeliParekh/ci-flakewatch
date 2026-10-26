@@ -486,8 +486,9 @@ Set these in `.env`. The defaults are shown.
 | `RETENTION_DAYS` | `90` | Raw results older than this are deleted (minimum 37) |
 | `MAX_UPLOAD_MB` | `10` | Maximum report size |
 | `UPLOAD_TOKEN` | *(empty)* | If set, writes must send `Authorization: Bearer <token>` |
+| `CORS_ORIGINS` | *(empty)* | Comma-separated origins allowed to call the API from a browser (e.g. `http://localhost:4173`) |
 | `FLAKEWATCH_NOW` | *(empty)* | Fixes "now" to a date-time, for tests |
-| `VITE_API_URL` | `http://localhost:4000` | API base URL for the dashboard |
+| `VITE_API_URL` | *(empty)* | API base URL for the dashboard; empty = same origin (the dev server proxies `/api` to port 4000) |
 
 ## 📤 Uploading results from CI
 

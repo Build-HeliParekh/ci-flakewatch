@@ -1,6 +1,11 @@
 // The 30-day flake-rate trend (REQ-STA-05). Pure function.
 import type { TrendPoint } from "@flakewatch/shared";
+import { computeScopeCounts } from "./stats.js";
 import type { ResultFact } from "./types.js";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const TREND_DAYS = 30;
+const TREND_WINDOW_DAYS = 7;
 
 /**
  * 30 daily points for one test case, for the UTC dates `date(now) − 30 … date(now) − 1`.
@@ -10,7 +15,23 @@ import type { ResultFact } from "./types.js";
  * trend doesn't depend on the `window` parameter.
  */
 export function trendSeries(branchFacts: readonly ResultFact[], now: Date): TrendPoint[] {
-  throw new Error(
-    `trendSeries is not implemented yet (T-15b); called with ${branchFacts.length} fact(s) at ${now.toISOString()}`,
-  );
+  const nowMs = now.getTime();
+  const todayStartMs = Math.floor(nowMs / DAY_MS) * DAY_MS;
+  const points: TrendPoint[] = [];
+
+  for (let daysBack = TREND_DAYS; daysBack >= 1; daysBack--) {
+    const dayStartMs = todayStartMs - daysBack * DAY_MS;
+    const endInclusiveMs = Math.min(dayStartMs + DAY_MS, nowMs);
+    const startExclusiveMs = dayStartMs + DAY_MS - TREND_WINDOW_DAYS * DAY_MS;
+    const inRange = branchFacts.filter(
+      (fact) => fact.startedAtMs > startExclusiveMs && fact.startedAtMs <= endInclusiveMs,
+    );
+    const counts = computeScopeCounts(inRange);
+    points.push({
+      date: new Date(dayStartMs).toISOString().slice(0, 10),
+      flakeRate: counts.commitsRun === 0 ? null : counts.flakeRate,
+    });
+  }
+
+  return points;
 }

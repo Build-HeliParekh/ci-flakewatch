@@ -243,7 +243,7 @@ apps/api/src/
 
 | Module | Signatures | Owns REQs | Task |
 |---|---|---|---|
-| `clock.ts` | `interface Clock { now(): Date }`<br>`function envClock(env?: Record<string, string \| undefined>): Clock` — reads `FLAKEWATCH_NOW` **on every call**, else system time<br>`function fixedClock(iso: string): Clock` (tests) | REQ-NFR-04 | T-05 |
+| `clock.ts` | `interface Clock { now(): Date }`<br>`function envClock(env?: Record<string, string \| undefined>, systemNow?: () => Date): Clock` — reads `FLAKEWATCH_NOW` **on every call**, else system time; throws `ClockError` if invalid *(`systemNow` and `ClockError` added in T-05 so tests never read the real clock, REQ-NFR-06)*<br>`function fixedClock(iso: string): Clock` (tests) | REQ-NFR-04 | T-05 |
 | `config.ts` | `interface Config { port: number; databasePath: string; quarantineThreshold: number; quarantineMinCommits: number; brokenMinCommits: number; retentionDays: number; maxUploadMb: number; uploadToken: string \| undefined }`<br>`class ConfigError extends Error { readonly variable: string }`<br>`function loadConfig(env: Record<string, string \| undefined>): Config` — throws `ConfigError` naming the variable | REQ-RET-02, §13.2 | T-05 |
 | `logger.ts` | `interface RequestLogLine { method: string; path: string; status: number; durationMs: number }`<br>`interface Logger { request(line: RequestLogLine): void; error(message: string): void }`<br>`function jsonLogger(write?: (line: string) => void): Logger` | REQ-NFR-03 | T-07 |
 | `db/open.ts` | `function openDb(path: string \| ":memory:"): Database` (creates folder, `foreign_keys=ON`, WAL for files)<br>`function migrate(db: Database): void` | — | T-06 |
@@ -421,7 +421,7 @@ Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2
 | T-02 | spec:check + pending registry | `chore/spec-check` | Both | T-01 | NFR-05 | S | Done |
 | T-03 | CI workflow `ci.yml` | `ci/pr-checks` | Both | T-02 | CI-01, 02, 03, 05 | S | Done |
 | T-04 | Shared contracts | `feat/shared-contracts` | Both | T-03 | API-01 | S | Done |
-| T-05 | Clock and config | `feat/clock-config` | TW → IM | T-03 | NFR-04, NFR-06, RET-02 | S | Todo |
+| T-05 | Clock and config | `feat/clock-config` | TW → IM | T-03 | NFR-04, NFR-06, RET-02 | S | Done |
 | T-06 | Database schema and test helpers | `chore/db-schema` | IM | T-03 | None | M | Done |
 | T-07 | API skeleton: app, errors, logging, health, startup | `feat/api-skeleton` | TW → IM | T-04, T-05, T-06 | API-01, API-07, NFR-03, RET-02 | M | Todo |
 | T-08 | JUnit parser | `feat/junit-parser` | TW → IM | T-04 | ING-02…06, ING-08 | M | Todo |

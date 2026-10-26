@@ -423,7 +423,7 @@ Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2
 | T-04 | Shared contracts | `feat/shared-contracts` | Both | T-03 | API-01 | S | Done |
 | T-05 | Clock and config | `feat/clock-config` | TW → IM | T-03 | NFR-04, NFR-06, RET-02 | S | Done |
 | T-06 | Database schema and test helpers | `chore/db-schema` | IM | T-03 | None | M | Done |
-| T-07 | API skeleton: app, errors, logging, health, startup, CORS | `feat/api-skeleton` | TW → IM | T-04, T-05, T-06 | API-01, API-07, API-08, NFR-03, RET-02 | M | Tests in review |
+| T-07 | API skeleton: app, errors, logging, health, startup, CORS | `feat/api-skeleton` | TW → IM | T-04, T-05, T-06 | API-01, API-07, API-08, NFR-03, RET-02 | M | Done |
 | T-08 | JUnit parser | `feat/junit-parser` | TW → IM | T-04 | ING-02…06, ING-08 | M | Todo |
 | T-09 | Ingest service (storage) | `feat/ingest-service` | TW → IM | T-06, T-08 | ING-04…07, ING-11…13 | M | Todo |
 | T-10 | Upload endpoint `POST /results` | `feat/upload-endpoint` | TW → IM | T-07, T-09 | ING-01…03, 07…14 | M | Todo |

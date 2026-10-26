@@ -16,9 +16,20 @@ export interface Logger {
 
 /** A logger that writes each entry as one JSON line (default: to stdout). */
 export function jsonLogger(write: (line: string) => void = (line) => console.log(line)): Logger {
-  return notImplemented("jsonLogger", write);
-}
-
-function notImplemented(name: string, ...args: unknown[]): never {
-  throw new Error(`${name} is not implemented yet (T-07b); called with ${args.length} argument(s)`);
+  return {
+    request(line) {
+      write(
+        JSON.stringify({
+          level: "info",
+          method: line.method,
+          path: line.path,
+          status: line.status,
+          durationMs: line.durationMs,
+        }),
+      );
+    },
+    error(message) {
+      write(JSON.stringify({ level: "error", message }));
+    },
+  };
 }

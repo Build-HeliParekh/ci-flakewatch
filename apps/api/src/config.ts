@@ -102,5 +102,17 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
  */
 function parseCorsOrigins(value: string | undefined): string[] {
   if (value === undefined) return [];
-  throw new Error(`parseCorsOrigins is not implemented yet (T-07b); value "${value}"`);
+  const origins = value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+  for (const origin of origins) {
+    if (!/^https?:\/\/[^/\s:]+(:\d{1,5})?$/i.test(origin)) {
+      throw new ConfigError(
+        "CORS_ORIGINS",
+        `CORS_ORIGINS="${value}" is invalid: "${origin}" is not http(s)://host[:port] with no path`,
+      );
+    }
+  }
+  return origins;
 }

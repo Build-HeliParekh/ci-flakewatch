@@ -13,5 +13,5 @@ export class HttpError extends Error {
 
 /** ISO 8601 UTC to the second with `Z`, fractional seconds truncated (decision D-17). */
 export function toApiTimestamp(date: Date): string {
-  throw new Error(`toApiTimestamp is not implemented yet (T-07b); ${date.getTime()}`);
+  return `${date.toISOString().slice(0, 19)}Z`;
 }

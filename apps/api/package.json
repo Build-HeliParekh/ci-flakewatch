@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run --root ../.. --project api"
+    "test": "vitest run --root ../.. --project api",
+    "db:migrate": "tsx src/cli/migrate.ts",
+    "db:reset": "tsx src/cli/reset.ts"
   },
   "dependencies": {
     "@flakewatch/shared": "0.0.0",

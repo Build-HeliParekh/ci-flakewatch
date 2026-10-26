@@ -27,6 +27,16 @@ Copy this block to the **top** of the log, so the newest entry comes first:
 
 ## Log
 
+### R-10: Tools installed from the wrong operating system broke the owner's setup
+- **Date:** 2026-10-25
+- **Found by:** human, when `npm run dev` failed on their Mac
+- **Stage:** implementation
+- **Requirement(s):** none (process)
+- **What happened:** The agent ran `npm ci` in the owner's repository folder from a Linux shell on the same computer, so `node_modules` held only Linux builds of esbuild and Rollup, and the dev server couldn't start on macOS. Reinstalling on the Mac then used an old npm (6), which can't handle npm workspaces and rewrote `package-lock.json` in an old format.
+- **Root cause:** A shared folder was treated as if it were the agent's own workspace, and the owner's Node version was never checked against the README's prerequisite.
+- **Fix:** The rewritten lockfile was restored with git. The owner is upgrading to Node 22 and npm 10 and reinstalling. Agents now run installs and checks only in their own workspace (AGENTS.md §6), and the README shows how to check versions first.
+- **Lesson:** Platform-specific files belong to the machine that installed them. Check prerequisites on the person's real machine before asking them to run anything.
+
 ### R-09: Two agent sessions shared one workspace
 - **Date:** 2026-10-25
 - **Found by:** human and agent, when the next task started

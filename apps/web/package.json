@@ -5,6 +5,7 @@
   "description": "flakewatch dashboard (React + Vite).",
   "type": "module",
   "scripts": {
+    "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
     "test": "vitest run --root ../.. --project web",
     "preview": "vite preview"

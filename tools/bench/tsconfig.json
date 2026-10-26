@@ -1,8 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist",
+    // The benchmark runs from source with tsx and imports the API and seed sources, so the
+    // build is a type-check only.
+    "rootDir": "../..",
+    "noEmit": true,
+    "declaration": false,
+    "sourceMap": false,
     "types": ["node"]
   },
   "include": ["src"]

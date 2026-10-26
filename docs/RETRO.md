@@ -27,6 +27,46 @@ Copy this block to the **top** of the log, so the newest entry comes first:
 
 ## Log
 
+### R-16: The Quick start promised a dashboard that `npm run dev` didn't start
+- **Date:** 2026-10-26
+- **Found by:** implementer (close-out), following the README from a fresh checkout
+- **Stage:** review
+- **Requirement(s):** — (README, SPEC §13.2)
+- **What happened:** `npm run dev` started only the API, the dashboard had no `dev` script, and nothing read the `.env` file the README tells people to create.
+- **Root cause:** The scaffold added placeholder scripts, and no task owned "the Quick start works end to end". Every test ran the pieces separately.
+- **Fix:** `npm run dev` runs the API and the dashboard together with `concurrently`; both read the root `.env`.
+- **Lesson:** Make "follow the README on a fresh checkout" part of the definition of done for the close-out, not an afterthought.
+
+### R-15: An approved CI test was stricter than the spec
+- **Date:** 2026-10-26
+- **Found by:** implementer (dogfood upload, T-36)
+- **Stage:** implementation
+- **Requirement(s):** REQ-CI-02, REQ-CI-04
+- **What happened:** The REQ-CI-02 test banned `secrets.` anywhere in `ci.yml`. The spec only forbids secrets in steps *before* the optional upload, and that upload must read its token secret, so no correct REQ-CI-04 could pass.
+- **Root cause:** The test was written before the step it constrained existed, from the requirement's short title rather than its acceptance criterion.
+- **Fix:** The test now checks that only the upload step reads a secret. Flagged to the owner in the PR, since it changes an approved test.
+- **Lesson:** Write a test from the acceptance criterion's exact words, and re-read it when a later requirement touches the same thing.
+
+### R-14: End-to-end tests found a focus bug and a layout too tall for the success measure
+- **Date:** 2026-10-26
+- **Found by:** test writer (end-to-end, T-32 to T-34), in a real browser
+- **Stage:** tests
+- **Requirement(s):** REQ-UI-09, REQ-NFR-02
+- **What happened:** After quarantining with the keyboard, focus was lost, because Quarantine and Release were two different buttons. And at 1280 × 800 the fifth row ended at 861 px, so "the top five visible without scrolling" failed. jsdom tests couldn't see either problem. The focus bug also left data changed, which broke later specs.
+- **Root cause:** Layout and focus only exist in a real browser, and the success measure (§1.3) had no test until the end.
+- **Fix:** One button that changes its label, so focus stays put; tighter vertical spacing (row 5 now ends at 768 px). Specs restore the data they change in `afterEach`.
+- **Lesson:** Run the success-measure test early with real data; it is a layout requirement as much as a data one.
+
+### R-13: The benchmark found the ranked list over its 300 ms target
+- **Date:** 2026-10-26
+- **Found by:** implementer (benchmarks, T-35)
+- **Stage:** implementation
+- **Requirement(s):** REQ-NFR-01
+- **What happened:** With ShopLite loaded, `GET /tests` and `GET /summary` took 320–365 ms at p95. Each request scanned every retained result to find "last seen", loaded 53,000 wide joined rows, and summarized every test's commits twice.
+- **Root cause:** The stats service was written for correctness first, which was right, but nothing measured it against the target until the end.
+- **Fix:** Last seen comes from the window's facts, plus only attempts dated after `now`; facts load attempts first and then small per-result columns; commit summaries are computed once. p95 is now about 150 ms, and all 424 tests passed unchanged.
+- **Lesson:** Add the benchmark as soon as the endpoint and the seed exist, so a slow design is caught while it's cheap to change.
+
 ### R-12: The upload size limit was off by one, and a non-multipart request hung
 - **Date:** 2026-10-26
 - **Found by:** test writer (backend PR), running the tests against the implementation

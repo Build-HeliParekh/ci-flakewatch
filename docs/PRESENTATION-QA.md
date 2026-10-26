@@ -209,10 +209,19 @@ Quick answers to questions likely to come up when presenting the project. Each a
 - An `AGENTS.md` file holds standing rules (read the spec first, name tests by ID, run the tests and lint).
 - When an agent gets something wrong, find the spec gap and fix the spec, not just the code. Gaps are logged in `RETRO.md`.
 
+**How did it end up?**
+- v1 is complete: all 76 requirements are covered by real tests, and `spec:check --strict` passes with none pending.
+- About 450 unit, integration, and acceptance tests, plus 22 end-to-end tests in a real browser, including axe accessibility checks in light and dark mode.
+- The ShopLite acceptance suite passed on its first run: every number in the spec matched, so the planned "fix discrepancies" task wasn't needed.
+- The benchmark caught a real problem (the list endpoint at 320–365 ms against a 300 ms target), fixed to about 150 ms without changing a single test.
+
+**What did the tests catch that a human might have missed?**
+- A library validator that accepts invalid XML (`&` unescaped), an off-by-one size limit, a request that hung, lost keyboard focus, and a layout too tall to show the top five rows. Each is logged in `RETRO.md` with the missing sentence that caused it.
+
 **What's the role of GitHub Actions?**
 - On every PR: lint, run the tests, and run the spec traceability check.
 - An agent can review PRs, or open a PR for a labeled issue, with a human approving the merge.
-- Dogfooding: the project's own test results are uploaded to flakewatch.
+- Dogfooding: an optional step uploads the project's own test results to a hosted flakewatch, once `FLAKEWATCH_URL` is set. It never fails the build.
 
 ---
 

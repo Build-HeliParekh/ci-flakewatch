@@ -421,7 +421,7 @@ Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2
 | T-02 | spec:check + pending registry | `chore/spec-check` | Both | T-01 | NFR-05 | S | Done |
 | T-03 | CI workflow `ci.yml` | `ci/pr-checks` | Both | T-02 | CI-01, 02, 03, 05 | S | Done |
 | T-04 | Shared contracts | `feat/shared-contracts` | Both | T-03 | API-01 | S | Done |
-| T-05 | Clock and config | `feat/clock-config` | TW → IM | T-03 | NFR-04, NFR-06, RET-02 | S | Tests in review |
+| T-05 | Clock and config | `feat/clock-config` | TW → IM | T-03 | NFR-04, NFR-06, RET-02 | S | Done |
 | T-06 | Database schema and test helpers | `chore/db-schema` | IM | T-03 | None | M | Done |
 | T-07 | API skeleton: app, errors, logging, health, startup | `feat/api-skeleton` | TW → IM | T-04, T-05, T-06 | API-01, API-07, NFR-03, RET-02 | M | Todo |
 | T-08 | JUnit parser | `feat/junit-parser` | TW → IM | T-04 | ING-02…06, ING-08 | M | Todo |

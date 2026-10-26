@@ -348,7 +348,7 @@ TrendChart({ points: TrendPoint[] }); CommitStrip({ commits: HistoryCommit[] });
 
 ### 3.6 Database schema (SQLite, `better-sqlite3`)
 
-Times are stored as UTC epoch milliseconds (`*_ms INTEGER`) for range comparisons; the API serialises them as ISO 8601 UTC (format: PQ-06). Migrations are numbered SQL files in `apps/api/src/db/migrations/`, applied by `migrate()` at startup and by `npm run db:migrate`.
+Times are stored as UTC epoch milliseconds (`*_ms INTEGER`) for range comparisons; the API serialises them as ISO 8601 UTC (format: PQ-06). Migrations are numbered TypeScript modules that export their SQL (`apps/api/src/db/migrations/NNNN_<name>.ts`, listed in `migrations/index.ts`), so the build needs no step to copy `.sql` files. They are applied by `migrate()` at startup and by `npm run db:migrate`. *(Changed from "SQL files" in T-06.)*
 
 | Table | Columns | Keys and indexes | Spec term |
 |---|---|---|---|
@@ -422,7 +422,7 @@ Legend. **Role:** TW = test writer, IM = implementer, Both = combined (see §2.2
 | T-03 | CI workflow `ci.yml` | `ci/pr-checks` | Both | T-02 | CI-01, 02, 03, 05 | S | Done |
 | T-04 | Shared contracts | `feat/shared-contracts` | Both | T-03 | API-01 | S | Done |
 | T-05 | Clock and config | `feat/clock-config` | TW → IM | T-03 | NFR-04, RET-02 | S | Todo |
-| T-06 | Database schema and test helpers | `chore/db-schema` | IM | T-03 | None | M | Todo |
+| T-06 | Database schema and test helpers | `chore/db-schema` | IM | T-03 | None | M | Done |
 | T-07 | API skeleton: app, errors, logging, health, startup | `feat/api-skeleton` | TW → IM | T-04, T-05, T-06 | API-01, API-07, NFR-03, RET-02 | M | Todo |
 | T-08 | JUnit parser | `feat/junit-parser` | TW → IM | T-04 | ING-02…06, ING-08 | M | Todo |
 | T-09 | Ingest service (storage) | `feat/ingest-service` | TW → IM | T-06, T-08 | ING-04…07, ING-11…13 | M | Todo |

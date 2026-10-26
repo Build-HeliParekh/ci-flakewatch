@@ -27,6 +27,16 @@ Copy this block to the **top** of the log, so the newest entry comes first:
 
 ## Log
 
+### R-09: Two agent sessions shared one workspace
+- **Date:** 2026-10-25
+- **Found by:** human and agent, when the next task started
+- **Stage:** implementation
+- **Requirement(s):** none (process)
+- **What happened:** A second Claude session did T-06 in the same repository folder and the same agent workspace, while the first was idle. It left uncommitted work on a branch, and it rewrote the workspace's local history, dropping the T-14 commits from it. Nothing was lost because T-14 was already merged on GitHub, and the T-06 work was reviewed, rebased onto `main`, and kept.
+- **Root cause:** Nothing marks a task as claimed, and both sessions assumed they had the folder to themselves.
+- **Fix:** The workspace was rebuilt from `main` before continuing. T-06 was committed with a note crediting the other session.
+- **Lesson:** One task, one branch, one agent at a time. Mark a task *In progress* in PLAN.md (and push the branch) before starting, and check `git status` and the task's status before starting a new one.
+
 ### R-08: A test helper bug would have made a correct implementation fail
 - **Date:** 2026-10-25
 - **Found by:** test writer (T-13a), before handing the tests over

@@ -13,6 +13,8 @@ export interface Config {
   maxUploadMb: number;
   /** `undefined` when UPLOAD_TOKEN is unset or empty. */
   uploadToken: string | undefined;
+  /** Origins allowed cross-origin access (REQ-API-08); empty when CORS_ORIGINS is unset. */
+  corsOrigins: string[];
 }
 
 /** An invalid configuration value; `variable` names it (REQ-NFR-06). */
@@ -80,6 +82,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     retentionDays: numeric("RETENTION_DAYS"),
     maxUploadMb: numeric("MAX_UPLOAD_MB"),
     uploadToken: read("UPLOAD_TOKEN"),
+    corsOrigins: parseCorsOrigins(read("CORS_ORIGINS")),
   };
 
   const now = read("FLAKEWATCH_NOW");
@@ -91,4 +94,25 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   }
 
   return config;
+}
+
+/**
+ * CORS_ORIGINS: comma-separated `http(s)://host[:port]` origins with no path (REQ-API-08).
+ * Throws ConfigError naming CORS_ORIGINS for an invalid entry (REQ-NFR-06).
+ */
+function parseCorsOrigins(value: string | undefined): string[] {
+  if (value === undefined) return [];
+  const origins = value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+  for (const origin of origins) {
+    if (!/^https?:\/\/[^/\s:]+(:\d{1,5})?$/i.test(origin)) {
+      throw new ConfigError(
+        "CORS_ORIGINS",
+        `CORS_ORIGINS="${value}" is invalid: "${origin}" is not http(s)://host[:port] with no path`,
+      );
+    }
+  }
+  return origins;
 }

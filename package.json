@@ -24,7 +24,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "npm run test:e2e -w e2e",
-    "dev": "node -e \"console.log('dev servers are added in T-07 (API) and T-26 (web).')\"",
+    "dev": "npm run dev -w apps/api",
     "spec:check": "tsx tools/spec-check/src/cli.ts",
     "db:migrate": "npm run db:migrate -w apps/api",
     "db:reset": "npm run db:reset -w apps/api"

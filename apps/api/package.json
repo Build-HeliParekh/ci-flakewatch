@@ -8,7 +8,9 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --root ../.. --project api",
     "db:migrate": "tsx src/cli/migrate.ts",
-    "db:reset": "tsx src/cli/reset.ts"
+    "db:reset": "tsx src/cli/reset.ts",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "@flakewatch/shared": "0.0.0",

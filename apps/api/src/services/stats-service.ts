@@ -18,6 +18,7 @@ import type { ResultFact } from "../domain/types.js";
 import { windowRange } from "../domain/windows.js";
 import { loadBranchesWithResults, loadFacts, loadLastSeen } from "../db/repos/read.js";
 import type { Db } from "../db/open.js";
+import { toApiTimestamp } from "../http/errors.js";
 
 export interface ListScopeParams {
   repo?: string;
@@ -146,9 +147,9 @@ function lastSeenFor(
   return latest;
 }
 
-/** ISO 8601 UTC. The exact precision is still open (PLAN PQ-06). */
+/** ISO 8601 UTC to the second (REQ-API-01, decision D-17). */
 function toIso(ms: number | null): string | null {
-  return ms === null ? null : new Date(ms).toISOString();
+  return ms === null ? null : toApiTimestamp(new Date(ms));
 }
 
 function groupBy<T, K>(items: readonly T[], key: (item: T) => K): Map<K, T[]> {

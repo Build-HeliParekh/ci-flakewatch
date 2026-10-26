@@ -23,6 +23,7 @@ describe("loadConfig", () => {
       retentionDays: 90,
       maxUploadMb: 10,
       uploadToken: undefined,
+      corsOrigins: [], // added in T-07 (REQ-API-08)
     });
   });
 
@@ -60,6 +61,7 @@ describe("loadConfig", () => {
       retentionDays: 37,
       maxUploadMb: 0.5,
       uploadToken: "abc",
+      corsOrigins: [], // added in T-07 (REQ-API-08)
     });
   });
 

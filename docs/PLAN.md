@@ -476,8 +476,8 @@ From T-08 onward, the remaining tasks are delivered in **12 review groups** inst
 | T-27 | Overview cards and filter chips | `feat/overview-filters` | TW → IM | T-26 | UI-01, UI-02 | M | Done |
 | T-28 | Ranked table and search | `feat/ranked-table` | TW → IM | T-26 | UI-04, UI-05 | M | Done |
 | T-29 | Loading, empty, error states | `feat/ui-states` | TW → IM | T-27, T-28 | UI-08 | S | Done |
-| T-30 | Test detail page (read-only) | `feat/detail-page` | TW → IM | T-26 | UI-07 | M | Todo |
-| T-31 | Quarantine controls | `feat/quarantine-controls` | TW → IM | T-30 | UI-07, UI-09 | S | Todo |
+| T-30 | Test detail page (read-only) | `feat/detail-page` | TW → IM | T-26 | UI-07 | M | Done |
+| T-31 | Quarantine controls | `feat/quarantine-controls` | TW → IM | T-30 | UI-07, UI-09 | S | Done |
 | T-32 | E2E harness and overview flows | `test/e2e-overview` | Both | T-12, T-17, T-18, T-27, T-28 | NFR-02, UI-01…05 | M | Todo |
 | T-33 | E2E detail, quarantine, error flows | `test/e2e-detail` | TW (+ fix) | T-20, T-21, T-29, T-31, T-32 | UI-07, UI-08 | S | Todo |
 | T-34 | Accessibility and responsive layout | `feat/a11y` | TW → IM | T-29, T-31, T-32 | UI-09, UI-10 | M | Todo |

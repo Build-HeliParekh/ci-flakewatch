@@ -11,8 +11,13 @@ import type { Clock } from "../clock.js";
 import type { Config } from "../config.js";
 import type { Db } from "../db/open.js";
 import type { Logger } from "../logger.js";
+import type { IngestHooks } from "../ingest/service.js";
+import { createStatsService } from "../services/stats-service.js";
 import { HttpError } from "./errors.js";
 import { healthRoutes } from "./routes/health.js";
+import { quarantineRoutes } from "./routes/quarantine.js";
+import { readRoutes } from "./routes/read.js";
+import { resultsRoutes } from "./routes/results.js";
 
 export interface AppDeps {
   db: Db;
@@ -22,8 +27,10 @@ export interface AppDeps {
 }
 
 export interface AppOptions {
-  /** Extra routers mounted under /api/v1 before the 404 handler (for tests). */
+  /** Extra routers mounted under /api/v1 before the built-in routes (for tests). */
   extraRoutes?: readonly Router[];
+  /** Fault injection for uploads (REQ-ING-11, tests only). */
+  ingestHooks?: IngestHooks;
 }
 
 /**
@@ -46,8 +53,23 @@ export function createApp(deps: AppDeps, options: AppOptions = {}): Express {
   app.use(express.json({ limit: "1mb" }));
 
   const api = express.Router();
-  api.use(healthRoutes(deps.db));
+  const stats = createStatsService(deps.db, {
+    quarantineThreshold: deps.config.quarantineThreshold,
+    quarantineMinCommits: deps.config.quarantineMinCommits,
+    brokenMinCommits: deps.config.brokenMinCommits,
+  });
+  // Test-only routes go first, so a test can stand in for a real route.
   for (const router of options.extraRoutes ?? []) api.use(router);
+  api.use(healthRoutes(deps.db));
+  api.use(
+    resultsRoutes({
+      db: deps.db,
+      config: deps.config,
+      ...(options.ingestHooks ? { hooks: options.ingestHooks } : {}),
+    }),
+  );
+  api.use(readRoutes(stats));
+  api.use(quarantineRoutes({ db: deps.db, config: deps.config, stats }));
   app.use("/api/v1", api);
 
   app.use((_req, _res, next) => next(new HttpError("NOT_FOUND", "No such route")));

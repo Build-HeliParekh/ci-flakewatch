@@ -2,7 +2,15 @@
 // Every method takes `now` and never reads the clock, so one request uses one `now`.
 import {
   ALL_BRANCHES,
+  STATUSES,
   type BranchScope,
+  type HistoryCommit,
+  type HistoryResponse,
+  type QuarantineListItem,
+  type RepoItem,
+  type Scope,
+  type SummaryResponse,
+  type TestDetailResponse,
   type QuarantineSource,
   type ScopeStats,
   type Status,
@@ -16,7 +24,17 @@ import { computeScopeCounts } from "../domain/stats.js";
 import { resolveStatus, scopesFor, type StatusRules } from "../domain/status.js";
 import type { ResultFact } from "../domain/types.js";
 import { windowRange } from "../domain/windows.js";
-import { loadBranchesWithResults, loadFacts, loadLastSeen } from "../db/repos/read.js";
+import {
+  loadBranchesWithResults,
+  loadFacts,
+  loadHistoryRows,
+  loadLastSeen,
+  loadRecentErrors,
+  loadRepos,
+} from "../db/repos/read.js";
+import { getManual, listManualIds } from "../db/repos/quarantine.js";
+import { compareCodePoints } from "../domain/detector.js";
+import { trendSeries } from "../domain/trend.js";
 import type { Db } from "../db/open.js";
 import { toApiTimestamp } from "../http/errors.js";
 
@@ -40,8 +58,26 @@ export interface StatsService {
    */
   scopes(testCaseId: number, now: Date): TestScope[] | null;
 
-  // Added by later tasks: testDetail (T-19), history (T-20), quarantineList (T-22), repos (T-17).
+  /** Overview card counts for a scope (REQ-API-04), without `asOf`. */
+  summary(params: ListScopeParams, now: Date): Omit<SummaryResponse, "asOf">;
+
+  /** GET /tests/:id (REQ-API-05); `null` if the test case doesn't exist. */
+  testDetail(testCaseId: number, now: Date): TestDetailResponse | null;
+
+  /** GET /tests/:id/history (REQ-API-06); `null` if the test case doesn't exist. */
+  history(testCaseId: number, scope: Scope, now: Date): HistoryResponse | null;
+
+  /** GET /quarantine (REQ-QUA-05): 30d/* quarantined plus every manual one, never broken. */
+  quarantineList(repo: string, now: Date): QuarantineListItem[];
+
+  /** GET /repos (REQ-API-02). */
+  repos(): RepoItem[];
 }
+
+/** REQ-API-06: at most this many commits, newest first. */
+const HISTORY_COMMITS = 100;
+/** REQ-API-05: the most recent failure messages. */
+const RECENT_ERRORS = 5;
 
 type ScopeResult = ScopeStats & {
   status: Status | null;
@@ -83,7 +119,7 @@ export function createStatsService(db: Db, rules: StatusRules): StatsService {
     return { ...counts, lastSeenAt: toIso(lastSeenMs), status, quarantineSource };
   };
 
-  return {
+  const service: StatsService = {
     listScope(params, now) {
       const range = windowRange(params.window, now);
       // Three queries per call: facts in the scope, last-seen times, and manual quarantines.
@@ -132,7 +168,112 @@ export function createStatsService(db: Db, rules: StatusRules): StatsService {
         };
       });
     },
+
+    summary(params, now) {
+      const items = service.listScope(params, now);
+      const count = (status: Status) => items.filter((item) => item.status === status).length;
+      const counts = Object.fromEntries(
+        STATUSES.map((status) => [status, count(status)]),
+      ) as Record<Status, number>;
+      return {
+        ...counts,
+        failedAttemptsFromFlakes: items
+          .filter((item) => item.status === "flaky" || item.status === "quarantined")
+          .reduce((sum, item) => sum + item.failedAttempts, 0),
+      };
+    },
+
+    testDetail(testCaseId, now) {
+      const identity = db
+        .prepare<[number], TestIdentity>(
+          "SELECT id, repo, file, classname, name FROM test_cases WHERE id = ?",
+        )
+        .get(testCaseId);
+      if (!identity) return null;
+      return {
+        ...identity,
+        manualQuarantine: getManual(db, testCaseId),
+        scopes: service.scopes(testCaseId, now) ?? [],
+        recentErrors: loadRecentErrors(db, testCaseId, RECENT_ERRORS).map((row) => ({
+          commitSha: row.commitSha,
+          branch: row.branch,
+          attempt: row.attempt,
+          startedAt: toApiTimestamp(new Date(row.startedAtMs)),
+          message: row.message,
+        })),
+      };
+    },
+
+    history(testCaseId, scope, now) {
+      const exists = db
+        .prepare<[number], { id: number }>("SELECT id FROM test_cases WHERE id = ?")
+        .get(testCaseId);
+      if (!exists) return null;
+
+      const rows = loadHistoryRows(db, testCaseId, scope.branch);
+      const branchFacts: ResultFact[] = rows.map((row) => ({ ...row, testCaseId, repo: "" }));
+      const range = windowRange(scope.window, now);
+      const inScope = rows.filter(
+        (row) =>
+          row.startedAtMs > range.startExclusiveMs && row.startedAtMs <= range.endInclusiveMs,
+      );
+      const scopeFacts = selectScopeFacts(branchFacts, scope.branch, range);
+      const rowsByCommit = groupBy(inScope, (row) => row.commitSha);
+
+      // Commits with only skipped results are left out (decision PQ-08).
+      const commits = summarizeCommits(scopeFacts)
+        .reverse()
+        .slice(0, HISTORY_COMMITS)
+        .map((summary): HistoryCommit => ({
+          commitSha: summary.commitSha,
+          branches: summary.branches,
+          firstStartedAt: toApiTimestamp(new Date(summary.firstStartedAtMs)),
+          outcome: summary.outcome,
+          rerun: summary.decisiveResults > 1,
+          // One entry per result, so an in-run retry shows twice (decision PQ-07).
+          attempts: (rowsByCommit.get(summary.commitSha) ?? []).map((row) => ({
+            attempt: row.attempt,
+            startedAt: toApiTimestamp(new Date(row.startedAtMs)),
+            status: row.status,
+            durationMs: row.durationMs,
+          })),
+        }));
+      return { commits, trend: trendSeries(branchFacts, now) };
+    },
+
+    quarantineList(repo, now) {
+      const scoped = new Map(
+        service
+          .listScope({ repo, branch: ALL_BRANCHES, window: "30d" }, now)
+          .map((item) => [item.id, item]),
+      );
+      const manualIds = new Set(listManualIds(db, repo));
+      const identities = testCasesById(repo);
+      const items: QuarantineListItem[] = [];
+      for (const [id, identity] of identities) {
+        const item = scoped.get(id);
+        // Broken is never listed, even when manually quarantined (decision PQ-09).
+        if (item?.status === "broken") continue;
+        if (item?.status !== "quarantined" && !manualIds.has(id)) continue;
+        items.push({
+          id,
+          file: identity.file,
+          classname: identity.classname,
+          name: identity.name,
+          quarantineSource: item ? item.quarantineSource : "manual",
+        });
+      }
+      return items.sort(
+        (a, b) =>
+          compareCodePoints(a.name, b.name) || compareCodePoints(a.file, b.file) || a.id - b.id,
+      );
+    },
+
+    repos() {
+      return loadRepos(db);
+    },
   };
+  return service;
 }
 
 /** The last-seen time for a branch, or the latest over all branches for `*`. */

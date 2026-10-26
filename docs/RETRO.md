@@ -27,6 +27,16 @@ Copy this block to the **top** of the log, so the newest entry comes first:
 
 ## Log
 
+### R-12: The upload size limit was off by one, and a non-multipart request hung
+- **Date:** 2026-10-26
+- **Found by:** test writer (backend PR), running the tests against the implementation
+- **Stage:** tests
+- **Requirement(s):** REQ-ING-09, REQ-ING-01
+- **What happened:** busboy's `fileSize` limit treats a file of exactly the limit as too large, so a report of exactly `MAX_UPLOAD_MB` was rejected with `413`, although the spec only rejects reports *larger* than the limit. Separately, a JSON request to the upload endpoint hung: the JSON body parser had already read the body, and the route waited for an end event that never came.
+- **Root cause:** The library's meaning of "limit" wasn't checked against the spec's "larger than", and the route assumed it was the only reader of the request body.
+- **Fix:** The route counts bytes itself and allows exactly the limit, and it resolves at once when the body was already read. Tests cover the exact-limit case and the JSON request.
+- **Lesson:** Test boundaries at exactly the limit, not only clearly over it.
+
 ### R-11: The XML library's validator accepts a bare "&"
 - **Date:** 2026-10-26
 - **Found by:** test writer (T-08), running the tests against a throwaway implementation

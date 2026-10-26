@@ -6,6 +6,7 @@ import { loadConfig } from "./config.js";
 import { databasePathFromEnv, migrate, openDb } from "./db/open.js";
 import { createApp } from "./http/app.js";
 import { jsonLogger } from "./logger.js";
+import { scheduleRetention } from "./retention.js";
 
 export interface RunningServer {
   port: number;
@@ -21,7 +22,9 @@ export async function startServer(env: Record<string, string | undefined>): Prom
   const db = openDb(databasePathFromEnv(env));
   migrate(db);
   const logger = jsonLogger();
-  const app = createApp({ db, config, clock: envClock(env), logger });
+  const clock = envClock(env);
+  const app = createApp({ db, config, clock, logger });
+  const retention = scheduleRetention({ db, config, clock, logger });
 
   const server = await new Promise<import("node:http").Server>((resolve, reject) => {
     const listening = app.listen(config.port, () => resolve(listening));
@@ -32,6 +35,7 @@ export async function startServer(env: Record<string, string | undefined>): Prom
     close: () =>
       new Promise<void>((resolve, reject) => {
         server.close((error) => {
+          retention.stop();
           db.close();
           if (error) reject(error);
           else resolve();

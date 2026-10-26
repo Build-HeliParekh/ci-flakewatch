@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="com.shoplite.profile.AvatarTest" time="1.517" tests="2" errors="0" skipped="0" failures="1">
+  <properties>
+    <property name="java.version" value="21.0.4"/>
+  </properties>
+  <testcase name="uploadsAvatar" classname="com.shoplite.profile.AvatarTest" time="1.205">
+    <failure message="Timeout after 5000ms" type="java.util.concurrent.TimeoutException"><![CDATA[java.util.concurrent.TimeoutException: Timeout after 5000ms
+	at com.shoplite.profile.AvatarTest.uploadsAvatar(AvatarTest.java:41)]]></failure>
+    <system-out><![CDATA[uploading 2.1 MB]]></system-out>
+  </testcase>
+  <testcase name="rejectsLargeFiles" classname="com.shoplite.profile.AvatarTest" time="0.312"/>
+</testsuite>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="1" failures="1" skipped="0" tests="3" time="0.874" timestamp="2026-10-23T17:42:00.000000+00:00" hostname="runner">
+    <testcase classname="tests.test_orders" name="test_exports_csv" file="tests/test_orders.py" line="12" time="0.301">
+      <failure message="AssertionError: assert 3 == 4">def test_exports_csv():
+&gt;       assert len(rows) == 4
+E       AssertionError: assert 3 == 4</failure>
+    </testcase>
+    <testcase classname="tests.test_orders" name="test_lists_orders" file="tests/test_orders.py" line="30" time="0.120" />
+    <testcase classname="tests.test_payments" name="test_refunds_partial" file="tests/test_payments.py" line="8" time="0.453">
+      <error message="failed on setup with &quot;ConnectionRefusedError: [Errno 111] Connection refused&quot;">ConnectionRefusedError: [Errno 111] Connection refused</error>
+    </testcase>
+  </testsuite>
+</testsuites>
